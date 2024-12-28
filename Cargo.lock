@@ -3,5 +3,5 @@
 version = 3
 
 [[package]]
-name = "fs_ops"
+name = "file_ref"
 version = "0.1.0"
