@@ -1,22 +1,64 @@
-use std::{ error::Error, ops::{ Deref, DerefMut } };
-use crate::FsPath;
+use std::error::Error;
+
+
+
+// Could be chars, but will be used as str's mainly, so this stops the program from converting.
+pub(crate) const SEPARATOR:&str = "/";
+const INVALID_SEPARATOR:&str = "\\";
 
 
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct FileRef(pub FsPath);
+pub enum FileRef {
+	StaticStr(&'static str),
+	Owned(String)
+}
 impl FileRef {
 
 	/* CONSTRUCTOR METHODS */
 
-	/// Create a new file with an owned path.
+	/// Create a new owned path.
 	pub fn new(path:&str) -> FileRef {
-		FileRef(FsPath::new(path))
+		FileRef::Owned(path.replace(INVALID_SEPARATOR, SEPARATOR))
 	}
 
-	/// Create a new file with a statically borrowed path.
+	/// Create a new statically borrowed path.
 	pub const fn new_const(path:&'static str) -> FileRef {
-		FileRef(FsPath::new_const(path))
+		FileRef::StaticStr(path)
+	}
+
+
+
+	/* PROPERTY GETTER METHODS */
+
+	/// Get the raw path.
+	pub fn path(&self) -> &str {
+		match self {
+			FileRef::StaticStr(path) => *path,
+			FileRef::Owned(path) => path.as_str()
+		}
+	}
+
+	/// Get the directory the file is in.
+	pub fn parent_dir(&self) -> Result<FileRef, Box<dyn Error>> {
+		let path:&str = self.path();
+		let nodes:Vec<&str> = self.path_nodes();
+		if nodes.len() <= 1 {
+			Err(format!("Could not get dir of file \"{path}\", as it only contains the file name.").into())
+		} else {
+			let parent_dir_len:usize = nodes[..nodes.len() - 1].join(SEPARATOR).len();
+			Ok(FileRef::new(&path[..parent_dir_len]))
+		}
+	}
+
+	/// Get a list of nodes in the path.
+	pub(crate) fn path_nodes(&self) -> Vec<&str> {
+		self.path().split(SEPARATOR).collect()
+	}
+
+	/// Get the last node of the path.
+	pub(crate) fn last_node(&self) -> &str {
+		self.path().split(SEPARATOR).last().unwrap_or_default()
 	}
 
 
@@ -35,7 +77,7 @@ impl FileRef {
 
 	/// Get the name of the file/dir.
 	pub fn name(&self) -> &str {
-		self.0.last_node()
+		self.last_node()
 	}
 
 	/// Get the name of the file without extension.
@@ -120,6 +162,24 @@ impl FileRef {
 
 	/* FILE WRITING METHODS */
 
+	/// If the file/dir does not exist, create it.
+	pub fn guarantee_exists(&mut self) -> Result<(), Box<dyn Error>> {
+		if !self.exists() {
+			self.create()?;
+		}
+		Ok(())
+	}
+
+	/// If the parent dir does not exist, create it.
+	pub fn guarantee_parent_dir(&mut self) -> Result<(), Box<dyn Error>> {
+		let mut parent_dir:FileRef = self.parent_dir()?;
+		if !parent_dir.exists() {
+			parent_dir.guarantee_parent_dir()?;
+			parent_dir.create()?;
+		}
+		Ok(())
+	}
+
 	/// Create the file.
 	pub fn create(&mut self) -> Result<(), Box<dyn Error>> {
 		use std::fs::{ File, create_dir };
@@ -136,14 +196,6 @@ impl FileRef {
 				Ok(())
 			}
 		}
-	}
-
-	/// Guarantee that the file exists.
-	pub fn guarantee_exists(&mut self) -> Result<(), Box<dyn Error>> {
-		if !self.exists() {
-			self.create()?;
-		}
-		Ok(())
 	}
 
 	/// Write a string to the file.
@@ -238,19 +290,92 @@ impl FileRef {
 
 
 
-/* FsPath INHERITED METHODS */
-impl Deref for FileRef {
-	type Target = FsPath;
-	
-	fn deref(&self) -> &Self::Target {
-		&self.0
-	}
+/* STR INHERITED METHODS */
+macro_rules! impl_inherit_str {
+
+	// Case for methods without arguments.
+	($fn_name:ident, $output_type:ty) => {
+		impl FileRef {
+			pub fn $fn_name(&self) -> $output_type {
+				self.path().$fn_name()
+			}
+		}
+	};
+
+	// Case for methods with arguments.
+	($fn_name:ident, $output_type:ty, ($($arg_name:ident :$arg_type:ty),*)) => {
+		impl FileRef {
+			pub fn $fn_name(&self, $($arg_name:$arg_type),*) -> $output_type {
+				self.path().$fn_name($($arg_name),*)
+			}
+		}
+	};
+
+	// Case for methods returning `FileRef`.
+	(ret_self $fn_name:ident) => {
+		impl FileRef {
+			pub fn $fn_name(&self) -> FileRef {
+				FileRef::new(&self.path().$fn_name())
+			}
+		}
+	};
+
+	// Case for methods returning `FileRef` with arguments.
+	(ret_self $fn_name:ident, ($($arg_name:ident :$arg_type:ty),*)) => {
+		impl FileRef {
+			pub fn $fn_name(&self, $($arg_name:$arg_type),*) -> FileRef {
+				FileRef::new(&self.path().$fn_name($($arg_name),*))
+			}
+		}
+	};
+
+	// Case for methods returning `Option<FileRef>`.
+	(ret_self_opt $fn_name:ident) => {
+		impl FileRef {
+			pub fn $fn_name(&self) -> Option<FileRef> {
+				self.path().$fn_name().map(|path| FileRef::new(path))
+			}
+		}
+	};
+
+	// Case for methods returning `Option<FileRef>` with arguments.
+	(ret_self_opt $fn_name:ident, ($($arg_name:ident :$arg_type:ty),*)) => {
+		impl FileRef {
+			pub fn $fn_name(&self, $($arg_name:$arg_type),*) -> Option<FileRef> {
+				self.path().$fn_name($($arg_name),*).map(|path| FileRef::new(path))
+			}
+		}
+	};
 }
-impl DerefMut for FileRef {
-	fn deref_mut(&mut self) -> &mut Self::Target {
-		&mut self.0
-	}
-}
+impl_inherit_str!(len, usize);
+impl_inherit_str!(is_empty, bool);
+impl_inherit_str!(is_char_boundary, bool, (index:usize));
+impl_inherit_str!(contains, bool, (pattern:&str));
+impl_inherit_str!(starts_with, bool, (prefix:&str));
+impl_inherit_str!(ends_with, bool, (suffix:&str));
+impl_inherit_str!(find, Option<usize>, (needle:&str));
+impl_inherit_str!(rfind, Option<usize>, (needle:&str));
+impl_inherit_str!(split_at, (&str, &str), (mid:usize));
+impl_inherit_str!(chars, std::str::Chars<'_>);
+impl_inherit_str!(char_indices, std::str::CharIndices<'_>);
+impl_inherit_str!(bytes, std::str::Bytes<'_>);
+impl_inherit_str!(lines, std::str::Lines<'_>);
+impl_inherit_str!(split_whitespace, std::str::SplitWhitespace<'_>);
+impl_inherit_str!(split, std::str::Split<'_, char>, (sep:char));
+impl_inherit_str!(escape_debug, std::str::EscapeDebug<'_>);
+impl_inherit_str!(escape_default, std::str::EscapeDefault<'_>);
+impl_inherit_str!(escape_unicode, std::str::EscapeUnicode<'_>);
+impl_inherit_str!(splitn, std::str::SplitN<'_, char>, (n:usize, sep:char));
+impl_inherit_str!(rsplitn, std::str::RSplitN<'_, char>, (n:usize, sep:char));
+impl_inherit_str!(ret_self to_lowercase);
+impl_inherit_str!(ret_self to_uppercase);
+impl_inherit_str!(ret_self trim);
+impl_inherit_str!(ret_self trim_start);
+impl_inherit_str!(ret_self trim_end);
+impl_inherit_str!(ret_self repeat, (n:usize));
+impl_inherit_str!(ret_self replace, (from:&str, to:&str));
+impl_inherit_str!(ret_self_opt strip_prefix, (prefix:&str));
+impl_inherit_str!(ret_self_opt strip_suffix, (suffix:&str));
 
 
 
@@ -259,7 +384,146 @@ impl DerefMut for FileRef {
 mod tests {
 	use super::*;
 	
+
+
+	/* PATH TESTS */
 	
+	#[test]
+	fn test_new() {
+		let path:&str = "dir\\file.txt";
+		let fs_path:FileRef = FileRef::new(path);
+		assert_eq!(fs_path.path(), "dir/file.txt");
+	}
+
+	#[test]
+	fn test_new_const() {
+		const PATH:&str = "static/dir/file.txt";
+		let fs_path:FileRef = FileRef::new_const(PATH);
+		assert_eq!(fs_path.path(), PATH);
+	}
+
+	#[test]
+	fn test_path() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		assert_eq!(fs_path.path(), "dir/file.txt");
+	}
+
+	#[test]
+	fn test_parent_dir() {
+		let fs_path:FileRef = FileRef::new("dir/subdir/file.txt");
+		let parent:FileRef = fs_path.parent_dir().unwrap();
+		assert_eq!(parent.path(), "dir/subdir");
+	}
+
+	#[test]
+	fn test_parent_dir_root() {
+		let fs_path:FileRef = FileRef::new("file.txt");
+		assert!(fs_path.parent_dir().is_err());
+	}
+
+	#[test]
+	fn test_path_nodes() {
+		let fs_path:FileRef = FileRef::new("dir/subdir/file.txt");
+		let nodes:Vec<&str> = fs_path.path_nodes();
+		assert_eq!(nodes, vec!["dir", "subdir", "file.txt"]);
+	}
+
+	#[test]
+	fn test_last_node() {
+		let fs_path:FileRef = FileRef::new("dir/subdir/file.txt");
+		assert_eq!(fs_path.last_node(), "file.txt");
+	}
+
+	#[test]
+	fn test_len() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		assert_eq!(fs_path.len(), 12);
+	}
+
+	#[test]
+	fn test_is_empty() {
+		let fs_path:FileRef = FileRef::new("");
+		assert!(fs_path.is_empty());
+
+		let fs_path:FileRef = FileRef::new("not_empty");
+		assert!(!fs_path.is_empty());
+	}
+
+	#[test]
+	fn test_contains() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		assert!(fs_path.contains("file"));
+		assert!(!fs_path.contains("no_file"));
+	}
+
+	#[test]
+	fn test_starts_with() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		assert!(fs_path.starts_with("dir"));
+		assert!(!fs_path.starts_with("file"));
+	}
+
+	#[test]
+	fn test_ends_with() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		assert!(fs_path.ends_with("file.txt"));
+		assert!(!fs_path.ends_with("dir"));
+	}
+
+	#[test]
+	fn test_to_lowercase() {
+		let fs_path:FileRef = FileRef::new("DIR/FILE.TXT");
+		let lower:FileRef = fs_path.to_lowercase();
+		assert_eq!(lower.path(), "dir/file.txt");
+	}
+
+	#[test]
+	fn test_to_uppercase() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		let upper:FileRef = fs_path.to_uppercase();
+		assert_eq!(upper.path(), "DIR/FILE.TXT");
+	}
+
+	#[test]
+	fn test_trim() {
+		let fs_path:FileRef = FileRef::new("   dir/file.txt   ");
+		let trimmed:FileRef = fs_path.trim();
+		assert_eq!(trimmed.path(), "dir/file.txt");
+	}
+
+	#[test]
+	fn test_strip_prefix() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		let stripped:Option<FileRef> = fs_path.strip_prefix("dir/");
+		assert!(stripped.is_some());
+		assert_eq!(stripped.unwrap().path(), "file.txt");
+	}
+
+	#[test]
+	fn test_strip_suffix() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		let stripped:Option<FileRef> = fs_path.strip_suffix(".txt");
+		assert!(stripped.is_some());
+		assert_eq!(stripped.unwrap().path(), "dir/file");
+	}
+
+	#[test]
+	fn test_replace() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		let replaced:FileRef = fs_path.replace("file", "document");
+		assert_eq!(replaced.path(), "dir/document.txt");
+	}
+
+	#[test]
+	fn test_repeat() {
+		let fs_path:FileRef = FileRef::new("file_");
+		let repeated:FileRef = fs_path.repeat(3);
+		assert_eq!(repeated.path(), "file_file_file_");
+	}
+
+
+
+	/* FILE MODIFICATION TESTS */
 
 	/// Get a temp file.
 	fn temp_file() -> FileRef {
@@ -272,7 +536,6 @@ mod tests {
 		unsafe { FILE_INDEX += 1; }
 		file
 	}
-
 
 
 
