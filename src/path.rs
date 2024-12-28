@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, ops::Add};
 use crate::DirRef;
 
 
@@ -45,7 +45,7 @@ impl FsPath {
 		let path:&str = self.path();
 		let nodes:Vec<&str> = self.path_nodes();
 		if nodes.len() <= 1 {
-			return Err(format!("Could not get dir of file \"{path}\", as it only contains the file name.").into())
+			Err(format!("Could not get dir of file \"{path}\", as it only contains the file name.").into())
 		} else {
 			let parent_dir_len:usize = nodes[..nodes.len() - 1].join(SEPARATOR).len();
 			Ok(DirRef::new(&path[..parent_dir_len]))
@@ -60,6 +60,26 @@ impl FsPath {
 	/// Get the last node of the path.
 	pub(crate) fn last_node(&self) -> &str {
 		self.path().split(SEPARATOR).last().unwrap_or_default()
+	}
+
+
+
+	/* OPERATION METHODS */
+
+	/// If the parent dir does not exist, create it.
+	pub fn guarantee_parent_dir(&self) -> Result<(), Box<dyn Error>> {
+		let parent_dir:DirRef = self.parent_dir()?;
+		if !parent_dir.exists() {
+			parent_dir.create()?;
+		}
+		Ok(())
+	}
+}
+impl Add<&str> for FsPath {
+	type Output = FsPath;
+
+	fn add(self, addition:&str) -> Self::Output {
+		FsPath::new(&(self.path().to_owned() + addition))
 	}
 }
 

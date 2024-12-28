@@ -1,4 +1,4 @@
-use std::ops::{ Deref, DerefMut };
+use std::{ error::Error, ops::{ Deref, DerefMut } };
 use crate::FsPath;
 
 
@@ -26,6 +26,33 @@ impl DirRef {
 	/// Get the name of the file.
 	pub fn dir_name(&self) -> &str {
 		self.0.last_node()
+	}
+
+	/// Check if the files exists.
+	pub fn exists(&self) -> bool {
+		std::path::Path::new(&self.path()).exists() && std::fs::metadata(&self.path()).map(|data| data.is_dir()).unwrap_or(false)
+	}
+
+
+
+	/* DIRECTORY WRITING METHODS */
+
+	/// Create the directory.
+	pub fn create(&self) -> Result<(), Box<dyn Error>> {
+		if self.exists() {
+			Err(format!("Could not create dir \"{}\". Dir already exists.", self.path()).into())
+		} else {
+			std::fs::create_dir(self.path()).map_err(|error| error.into())
+		}
+	}
+
+
+
+	/* DIRECTORY REMOVING METHODS */
+
+	/// Delete the directory.
+	pub fn delete(&self) -> Result<(), Box<dyn Error>> {
+		std::fs::remove_dir_all(self.path()).map_err(|error| error.into())
 	}
 }
 
