@@ -1,5 +1,5 @@
-use std::{error::Error, ops::Add};
-use crate::DirRef;
+use std::{ error::Error, ops::Add };
+use crate::FileRef;
 
 
 
@@ -41,14 +41,14 @@ impl FsPath {
 	}
 
 	/// Get the directory the file is in.
-	pub fn parent_dir(&self) -> Result<DirRef, Box<dyn Error>> {
+	pub fn parent_dir(&self) -> Result<FileRef, Box<dyn Error>> {
 		let path:&str = self.path();
 		let nodes:Vec<&str> = self.path_nodes();
 		if nodes.len() <= 1 {
 			Err(format!("Could not get dir of file \"{path}\", as it only contains the file name.").into())
 		} else {
 			let parent_dir_len:usize = nodes[..nodes.len() - 1].join(SEPARATOR).len();
-			Ok(DirRef::new(&path[..parent_dir_len]))
+			Ok(FileRef::new(&path[..parent_dir_len]))
 		}
 	}
 
@@ -68,8 +68,9 @@ impl FsPath {
 
 	/// If the parent dir does not exist, create it.
 	pub fn guarantee_parent_dir(&self) -> Result<(), Box<dyn Error>> {
-		let parent_dir:DirRef = self.parent_dir()?;
+		let parent_dir:FileRef = self.parent_dir()?;
 		if !parent_dir.exists() {
+			parent_dir.guarantee_parent_dir()?;
 			parent_dir.create()?;
 		}
 		Ok(())
@@ -203,7 +204,7 @@ mod tests {
 	#[test]
 	fn test_parent_dir() {
 		let fs_path: FsPath = FsPath::new("dir/subdir/file.txt");
-		let parent: DirRef = fs_path.parent_dir().unwrap();
+		let parent: FileRef = fs_path.parent_dir().unwrap();
 		assert_eq!(parent.path(), "dir/subdir");
 	}
 
