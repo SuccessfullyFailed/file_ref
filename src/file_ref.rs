@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use crate::FileScanner;
+
 
 
 // Could be chars, but will be used as str's mainly, so this stops the program from converting.
@@ -286,6 +288,35 @@ impl FileRef {
 			remove_file(self.path()).map_err(|error| error.into())
 		}
 	}
+
+
+
+	/* QUICK SCANNER METHODS */
+
+	/// Create a basic scanner on this dir.
+	pub fn scanner(&self) -> FileScanner {
+		FileScanner::new(self)
+	}
+
+	/// Create a file-scanner on this dir that lists all files.
+	pub fn list_files(&self) -> FileScanner {
+		self.scanner().include_files()
+	}
+	
+	/// Create a file-scanner on this dir that lists all files recursively.
+	pub fn list_files_recurse(&self) -> FileScanner {
+		self.scanner().include_files().recurse()
+	}
+
+	/// Create a file-scanner on this dir that lists all dirs.
+	pub fn list_dirs(&self) -> FileScanner {
+		self.scanner().include_dirs()
+	}
+
+	/// Create a file-scanner on this dir that lists all dirs.
+	pub fn list_dirs_recurse(&self) -> FileScanner {
+		self.scanner().include_dirs().recurse()
+	}
 }
 
 
@@ -371,7 +402,9 @@ impl_inherit_str!(ret_self to_lowercase);
 impl_inherit_str!(ret_self to_uppercase);
 impl_inherit_str!(ret_self trim);
 impl_inherit_str!(ret_self trim_start);
+impl_inherit_str!(ret_self trim_start_matches, (pat:&str));
 impl_inherit_str!(ret_self trim_end);
+impl_inherit_str!(ret_self trim_end_matches, (pat:&str));
 impl_inherit_str!(ret_self repeat, (n:usize));
 impl_inherit_str!(ret_self replace, (from:&str, to:&str));
 impl_inherit_str!(ret_self_opt strip_prefix, (prefix:&str));
@@ -382,6 +415,7 @@ impl_inherit_str!(ret_self_opt strip_suffix, (suffix:&str));
 // Test with 1 thread!
 #[cfg(test)]
 mod tests {
+	use crate::unit_test_support::{ TempFile, UNIT_TEST_DIR };
 	use super::*;
 	
 
@@ -526,113 +560,112 @@ mod tests {
 	/* FILE MODIFICATION TESTS */
 
 	/// Get a temp file.
-	fn temp_file() -> FileRef {
-		const TEMP_DIR:FileRef = FileRef::new_const("target/unit_testing_temp_files/");
+	fn temp_file() -> TempFile {
 		static mut FILE_INDEX:usize = 0;
-		let mut file:FileRef = FileRef::new(&(TEMP_DIR.path().to_owned() + unsafe { &FILE_INDEX.to_string() } + ".txt"));
+		let mut file:FileRef = FileRef::new(&(UNIT_TEST_DIR.0.path().to_owned() + "file_ref/" + unsafe { &FILE_INDEX.to_string() } + ".txt"));
 		if file.exists() {
 			file.delete().expect("Could not delete existing temp file");
 		}
 		unsafe { FILE_INDEX += 1; }
-		file
+		TempFile(file)
 	}
 
 
 
 	#[test]
 	fn test_file_creation() {
-		let mut temp_file:FileRef = temp_file();
-		assert!(!temp_file.exists());
-		temp_file.create().unwrap();
-		assert!(temp_file.exists());
+		let mut temp_file:TempFile = temp_file();
+		assert!(!temp_file.0.exists());
+		temp_file.0.create().unwrap();
+		assert!(temp_file.0.exists());
 	}
 
 	#[test]
 	fn test_file_write_and_read() {
-		let mut temp_file:FileRef = temp_file();
+		let mut temp_file:TempFile = temp_file();
 
-		temp_file.create().unwrap();
+		temp_file.0.create().unwrap();
 
 		let content = "Hello, world!";
-		temp_file.write(content).unwrap();
+		temp_file.0.write(content).unwrap();
 
-		let read_content = temp_file.read().unwrap();
+		let read_content = temp_file.0.read().unwrap();
 		assert_eq!(content, read_content);
 	}
 
 	#[test]
 	fn test_file_write_bytes_and_read_bytes() {
-		let mut temp_file:FileRef = temp_file();
+		let mut temp_file:TempFile = temp_file();
 
-		temp_file.create().unwrap();
+		temp_file.0.create().unwrap();
 
 		let content = b"Hello, binary world!";
-		temp_file.write_bytes(content).unwrap();
+		temp_file.0.write_bytes(content).unwrap();
 
-		let read_content = temp_file.read_bytes().unwrap();
+		let read_content = temp_file.0.read_bytes().unwrap();
 		assert_eq!(content, read_content.as_slice());
 	}
 
 	#[test]
 	fn test_append_bytes() {
-		let mut temp_file:FileRef = temp_file();
+		let mut temp_file:TempFile = temp_file();
 		
-		temp_file.create().unwrap();
+		temp_file.0.create().unwrap();
 
 		let initial_content = "Hello";
 		let append_content = ", world!";
-		temp_file.write(initial_content).unwrap();
-		temp_file.append_bytes(append_content.as_bytes()).unwrap();
+		temp_file.0.write(initial_content).unwrap();
+		temp_file.0.append_bytes(append_content.as_bytes()).unwrap();
 
-		let read_content = temp_file.read().unwrap();
+		let read_content = temp_file.0.read().unwrap();
 		assert_eq!(read_content, "Hello, world!");
 	}
 
 	#[test]
 	fn test_read_range() {
-		let mut temp_file:FileRef = temp_file();
+		let mut temp_file:TempFile = temp_file();
 
-		temp_file.create().unwrap();
+		temp_file.0.create().unwrap();
 
 		let content = "Hello, world!";
-		temp_file.write(content).unwrap();
+		temp_file.0.write(content).unwrap();
 
-		let range_content = temp_file.read_range(7, 12).unwrap();
+		let range_content = temp_file.0.read_range(7, 12).unwrap();
 		assert_eq!(std::str::from_utf8(&range_content).unwrap(), "world");
 	}
 
 	#[test]
 	fn test_write_bytes_to_range() {
-		let mut temp_file:FileRef = temp_file();
+		let mut temp_file:TempFile = temp_file();
 
-		temp_file.create().unwrap();
+		temp_file.0.create().unwrap();
 
 		let content = "Hello, world!";
-		temp_file.write(content).unwrap();
+		temp_file.0.write(content).unwrap();
 
 		let replacement = "Rust!";
-		temp_file.write_bytes_to_range(7, replacement.as_bytes()).unwrap();
+		temp_file.0.write_bytes_to_range(7, replacement.as_bytes()).unwrap();
 
-		let read_content = temp_file.read().unwrap();
+		let read_content = temp_file.0.read().unwrap();
 		assert_eq!(read_content, "Hello, Rust!!");
 	}
 
 	#[test]
 	fn test_file_deletion() {
-		let mut temp_file:FileRef = temp_file();
+		let mut temp_file:TempFile = temp_file();
 
-		temp_file.create().unwrap();
-		assert!(temp_file.exists());
+		temp_file.0.create().unwrap();
+		assert!(temp_file.0.exists());
 
-		temp_file.delete().unwrap();
-		assert!(!temp_file.exists());
+		temp_file.0.delete().unwrap();
+		assert!(!temp_file.0.exists());
 	}
 
 	#[test]
 	fn test_file_copy() {
-		let temp_file:FileRef = temp_file();
-		let mut source_file_ref:FileRef = temp_file.clone();
-		let mut target_file_ref:FileRef = FileRef::new(&(temp_file.path().to_owned() + "_target.txt"));
+		let temp_file:TempFile = temp_file();
+		let mut source_file_ref:FileRef = temp_file.0.clone();
+		let mut target_file_ref:FileRef = FileRef::new(&(temp_file.0.path().to_owned() + "_target.txt"));
 
 		source_file_ref.create().unwrap();
 		let content = "Copy this content.";
