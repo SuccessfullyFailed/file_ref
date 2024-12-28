@@ -67,8 +67,8 @@ impl FsPath {
 	/* OPERATION METHODS */
 
 	/// If the parent dir does not exist, create it.
-	pub fn guarantee_parent_dir(&self) -> Result<(), Box<dyn Error>> {
-		let parent_dir:FileRef = self.parent_dir()?;
+	pub fn guarantee_parent_dir(&mut self) -> Result<(), Box<dyn Error>> {
+		let mut parent_dir:FileRef = self.parent_dir()?;
 		if !parent_dir.exists() {
 			parent_dir.guarantee_parent_dir()?;
 			parent_dir.create()?;

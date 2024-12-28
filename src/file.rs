@@ -121,7 +121,7 @@ impl FileRef {
 	/* FILE WRITING METHODS */
 
 	/// Create the file.
-	pub fn create(&self) -> Result<(), Box<dyn Error>> {
+	pub fn create(&mut self) -> Result<(), Box<dyn Error>> {
 		use std::fs::{ File, create_dir };
 
 		let is_dir:bool = self.is_dir();
@@ -139,7 +139,7 @@ impl FileRef {
 	}
 
 	/// Guarantee that the file exists.
-	pub fn guarantee_exists(&self) -> Result<(), Box<dyn Error>> {
+	pub fn guarantee_exists(&mut self) -> Result<(), Box<dyn Error>> {
 		if !self.exists() {
 			self.create()?;
 		}
@@ -147,7 +147,7 @@ impl FileRef {
 	}
 
 	/// Write a string to the file.
-	pub fn write(&self, contents:&str) -> Result<(), Box<dyn Error>> {
+	pub fn write(&mut self, contents:&str) -> Result<(), Box<dyn Error>> {
 		if self.is_dir() {
 			Err(format!("Could not write to dir \"{}\". Only able to write to files.", self.path()).into())
 		} else {
@@ -156,7 +156,7 @@ impl FileRef {
 	}
 
 	/// Write bytes to the file.
-	pub fn write_bytes(&self, data:&[u8]) -> Result<(), Box<dyn Error>> {
+	pub fn write_bytes(&mut self, data:&[u8]) -> Result<(), Box<dyn Error>> {
 		use std::{ fs::{ File, OpenOptions }, io::Write };
 		
 		if self.is_dir() {
@@ -172,7 +172,7 @@ impl FileRef {
 	}
 	
 	/// Read a specific range of bytes from the file.
-	pub fn write_bytes_to_range(&self, start:u64, data:&[u8]) -> Result<(), Box<dyn Error>> {
+	pub fn write_bytes_to_range(&mut self, start:u64, data:&[u8]) -> Result<(), Box<dyn Error>> {
 		use std::{ fs::{ File, OpenOptions }, io::{ Write, Seek, SeekFrom } };
 
 		if self.is_dir() {
@@ -187,7 +187,7 @@ impl FileRef {
 	}
 
 	/// Append bytes to the file.
-	pub fn append_bytes(&self, data:&[u8]) -> Result<(), Box<dyn Error>> {
+	pub fn append_bytes(&mut self, data:&[u8]) -> Result<(), Box<dyn Error>> {
 		use std::{ fs::{ File, OpenOptions }, io::Write };
 
 		if self.is_dir() {
@@ -207,7 +207,7 @@ impl FileRef {
 	/* FILE MOVING METHODS */
 
 	/// Copy the file to another location. Returns the number of bytes written.
-	pub fn copy_to(&self, target:&FileRef) -> Result<u64, Box<dyn Error>> {
+	pub fn copy_to(&self, target:&mut FileRef) -> Result<u64, Box<dyn Error>> {
 		use std::fs::copy;
 
 		if self.is_dir() {
@@ -225,7 +225,7 @@ impl FileRef {
 	/* FILE REMOVING METHODS */
 
 	/// Delete the file.
-	pub fn delete(&self) -> Result<(), Box<dyn Error>> {
+	pub fn delete(&mut self) -> Result<(), Box<dyn Error>> {
 		use std::fs::{ remove_dir_all, remove_file };
 
 		if self.is_dir() {
@@ -265,7 +265,7 @@ mod tests {
 	fn temp_file() -> FileRef {
 		const TEMP_DIR:FileRef = FileRef::new_const("target/unit_testing_temp_files/");
 		static mut FILE_INDEX:usize = 0;
-		let file:FileRef = FileRef::new(&(TEMP_DIR.path().to_owned() + unsafe { &FILE_INDEX.to_string() } + ".txt"));
+		let mut file:FileRef = FileRef::new(&(TEMP_DIR.path().to_owned() + unsafe { &FILE_INDEX.to_string() } + ".txt"));
 		if file.exists() {
 			file.delete().expect("Could not delete existing temp file");
 		}
@@ -278,7 +278,7 @@ mod tests {
 
 	#[test]
 	fn test_file_creation() {
-		let temp_file:FileRef = temp_file();
+		let mut temp_file:FileRef = temp_file();
 		assert!(!temp_file.exists());
 		temp_file.create().unwrap();
 		assert!(temp_file.exists());
@@ -286,7 +286,7 @@ mod tests {
 
 	#[test]
 	fn test_file_write_and_read() {
-		let temp_file:FileRef = temp_file();
+		let mut temp_file:FileRef = temp_file();
 
 		temp_file.create().unwrap();
 
@@ -299,7 +299,7 @@ mod tests {
 
 	#[test]
 	fn test_file_write_bytes_and_read_bytes() {
-		let temp_file:FileRef = temp_file();
+		let mut temp_file:FileRef = temp_file();
 
 		temp_file.create().unwrap();
 
@@ -312,7 +312,7 @@ mod tests {
 
 	#[test]
 	fn test_append_bytes() {
-		let temp_file:FileRef = temp_file();
+		let mut temp_file:FileRef = temp_file();
 		
 		temp_file.create().unwrap();
 
@@ -327,7 +327,7 @@ mod tests {
 
 	#[test]
 	fn test_read_range() {
-		let temp_file:FileRef = temp_file();
+		let mut temp_file:FileRef = temp_file();
 
 		temp_file.create().unwrap();
 
@@ -340,7 +340,7 @@ mod tests {
 
 	#[test]
 	fn test_write_bytes_to_range() {
-		let temp_file:FileRef = temp_file();
+		let mut temp_file:FileRef = temp_file();
 
 		temp_file.create().unwrap();
 
@@ -356,7 +356,7 @@ mod tests {
 
 	#[test]
 	fn test_file_deletion() {
-		let temp_file:FileRef = temp_file();
+		let mut temp_file:FileRef = temp_file();
 
 		temp_file.create().unwrap();
 		assert!(temp_file.exists());
@@ -368,14 +368,14 @@ mod tests {
 	#[test]
 	fn test_file_copy() {
 		let temp_file:FileRef = temp_file();
-		let source_file_ref:FileRef = temp_file.clone();
-		let target_file_ref:FileRef = FileRef::new(&(temp_file.path().to_owned() + "_target.txt"));
+		let mut source_file_ref:FileRef = temp_file.clone();
+		let mut target_file_ref:FileRef = FileRef::new(&(temp_file.path().to_owned() + "_target.txt"));
 
 		source_file_ref.create().unwrap();
 		let content = "Copy this content.";
 		source_file_ref.write(content).unwrap();
 
-		source_file_ref.copy_to(&target_file_ref).unwrap();
+		source_file_ref.copy_to(&mut target_file_ref).unwrap();
 		assert!(target_file_ref.exists());
 
 		let copied_content = target_file_ref.read().unwrap();
