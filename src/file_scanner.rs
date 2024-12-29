@@ -149,14 +149,14 @@ mod tests {
 	use super::*;
 
 	fn create_test_structure() -> TempFile {
-		let unit_test_dir:FileRef = UNIT_TEST_DIR.0 + "file_scanner/";
+		let unit_test_dir:FileRef = UNIT_TEST_DIR.0.clone() + "file_scanner/";
 		let _ = [
-			(unit_test_dir + "subdir1/subsubdir1").create(),
-			(unit_test_dir + "subdir2").create(),
-			(unit_test_dir + "file1.txt").create(),
-			(unit_test_dir + "subdir1/file2.txt").create(),
-			(unit_test_dir + "subdir1/subsubdir1/file3.txt").create(),
-			(unit_test_dir + "subdir2/file4.txt").create()
+			(unit_test_dir.clone() + "subdir1/subsubdir1").create(),
+			(unit_test_dir.clone() + "subdir2").create(),
+			(unit_test_dir.clone() + "file1.txt").create(),
+			(unit_test_dir.clone() + "subdir1/file2.txt").create(),
+			(unit_test_dir.clone() + "subdir1/subsubdir1/file3.txt").create(),
+			(unit_test_dir.clone() + "subdir2/file4.txt").create()
 		];
 		TempFile(unit_test_dir.clone())
 	}
