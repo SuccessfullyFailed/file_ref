@@ -1,4 +1,4 @@
-use std::error::Error;
+use std::{error::Error, ops::{Add, AddAssign}};
 
 use crate::FileScanner;
 
@@ -318,6 +318,18 @@ impl FileRef {
 		self.scanner().include_dirs().recurse()
 	}
 }
+impl Add<&str> for FileRef {
+	type Output = FileRef;
+
+	fn add(self, rhs:&str) -> Self::Output {
+		FileRef::new(&(self.path().to_owned() + rhs))
+	}
+}
+impl AddAssign<&str> for FileRef {
+	fn add_assign(&mut self, rhs:&str) {
+		*self = FileRef::new(&(self.path().to_owned() + rhs));
+	}
+}
 
 
 
@@ -562,7 +574,7 @@ mod tests {
 	/// Get a temp file.
 	fn temp_file() -> TempFile {
 		static mut FILE_INDEX:usize = 0;
-		let mut file:FileRef = FileRef::new(&(UNIT_TEST_DIR.0.path().to_owned() + "file_ref/" + unsafe { &FILE_INDEX.to_string() } + ".txt"));
+		let mut file:FileRef = UNIT_TEST_DIR.0 + "file_ref/" + unsafe { &FILE_INDEX.to_string() } + ".txt";
 		if file.exists() {
 			file.delete().expect("Could not delete existing temp file");
 		}
