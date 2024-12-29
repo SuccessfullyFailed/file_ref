@@ -145,27 +145,31 @@ impl Iterator for FileScanner {
 
 #[cfg(test)]
 mod tests {
-	use crate::unit_test_support::{ TempFile, UNIT_TEST_DIR };
+	use unit_test_support::TempFile;
 	use super::*;
 
+
+
 	fn create_test_structure() -> TempFile {
-		let unit_test_dir:FileRef = UNIT_TEST_DIR.0.clone() + "file_scanner/";
+		let unit_test_dir:TempFile = TempFile::new(None);
 		let _ = [
-			(unit_test_dir.clone() + "subdir1/subsubdir1").create(),
-			(unit_test_dir.clone() + "subdir2").create(),
-			(unit_test_dir.clone() + "file1.txt").create(),
-			(unit_test_dir.clone() + "subdir1/file2.txt").create(),
-			(unit_test_dir.clone() + "subdir1/subsubdir1/file3.txt").create(),
-			(unit_test_dir.clone() + "subdir2/file4.txt").create()
+			FileRef::new(unit_test_dir.path()).create(),
+			FileRef::new(&(unit_test_dir.path().to_owned() + "/subdir1/subsubdir1")).create(),
+			FileRef::new(&(unit_test_dir.path().to_owned() + "/subdir2")).create(),
+			FileRef::new(&(unit_test_dir.path().to_owned() + "/file1.txt")).create(),
+			FileRef::new(&(unit_test_dir.path().to_owned() + "/subdir1/file2.txt")).create(),
+			FileRef::new(&(unit_test_dir.path().to_owned() + "/subdir1/subsubdir1/file3.txt")).create(),
+			FileRef::new(&(unit_test_dir.path().to_owned() + "/subdir2/file4.txt")).create()
 		];
-		TempFile(unit_test_dir.clone())
+		unit_test_dir
 	}
 
 	#[test]
 	fn test_include_files() {
 		let temp_file:TempFile = create_test_structure();
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
 
-		let scanner:FileScanner = FileScanner::new(&temp_file.0).include_files();
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files();
 		let results:Vec<_> = scanner.collect();
 
 		// Check that only files are included
@@ -176,7 +180,8 @@ mod tests {
 	#[test]
 	fn test_include_dirs() {
 		let temp_file:TempFile = create_test_structure();
-		let scanner:FileScanner = FileScanner::new(&temp_file.0).include_dirs();
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_dirs();
 		let results:Vec<_> = scanner.collect();
 
 		// Check that only directories are included
@@ -187,7 +192,8 @@ mod tests {
 	#[test]
 	fn test_include_files_and_dirs() {
 		let temp_file:TempFile = create_test_structure();
-		let scanner:FileScanner = FileScanner::new(&temp_file.0).include_files().include_dirs();
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().include_dirs();
 		let results:Vec<_> = scanner.collect();
 
 		// Check that both files and directories are included
@@ -199,7 +205,8 @@ mod tests {
 	#[test]
 	fn test_filter() {
 		let temp_file:TempFile = create_test_structure();
-		let scanner:FileScanner = FileScanner::new(&temp_file.0).include_files().recurse().with_filter(Box::new(|f| f.name().ends_with(".txt")));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().recurse().with_filter(Box::new(|f| f.name().ends_with(".txt")));
 
 		let results:Vec<_> = scanner.collect();
 
@@ -211,7 +218,8 @@ mod tests {
 	#[test]
 	fn test_recursion() {
 		let temp_file:TempFile = create_test_structure();
-		let scanner:FileScanner = FileScanner::new(&temp_file.0).include_files().recurse();
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().recurse();
 		let results:Vec<_> = scanner.collect();
 
 		// Check that all files are included across all directories
@@ -221,7 +229,8 @@ mod tests {
 	#[test]
 	fn test_recurse_filter() {
 		let temp_file:TempFile = create_test_structure();
-		let scanner:FileScanner = FileScanner::new(&temp_file.0).include_files().with_recurse_filter(Box::new(|d| d.name() != "subdir1"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().with_recurse_filter(Box::new(|d| d.name() != "subdir1"));
 
 		let results:Vec<_> = scanner.collect();
 
@@ -232,7 +241,8 @@ mod tests {
 	#[test]
 	fn test_root_is_file() {
 		let temp_file:TempFile = create_test_structure();
-		let scanner:FileScanner = FileScanner::new(&FileRef::new(&(temp_file.0.path().to_owned() + "file1.txt"))).include_files().include_dirs().recurse();
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let scanner:FileScanner = FileScanner::new(&FileRef::new(&(temp_file_ref.path().to_owned() + "file1.txt"))).include_files().include_dirs().recurse();
 
 		let results:Vec<_> = scanner.collect();
 

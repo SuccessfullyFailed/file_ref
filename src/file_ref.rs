@@ -424,10 +424,9 @@ impl_inherit_str!(ret_self_opt strip_suffix, (suffix:&str));
 
 
 
-// Test with 1 thread!
 #[cfg(test)]
 mod tests {
-	use crate::unit_test_support::{ TempFile, UNIT_TEST_DIR };
+	use unit_test_support::TempFile;
 	use super::*;
 	
 
@@ -571,113 +570,108 @@ mod tests {
 
 	/* FILE MODIFICATION TESTS */
 
-	/// Get a temp file.
-	fn temp_file() -> TempFile {
-		static mut FILE_INDEX:usize = 0;
-		let file:FileRef = UNIT_TEST_DIR.0.clone() + "file_ref/" + unsafe { &FILE_INDEX.to_string() } + ".txt";
-		if file.exists() {
-			file.delete().expect("Could not delete existing temp file");
-		}
-		unsafe { FILE_INDEX += 1; }
-		TempFile(file)
-	}
-
-
-
 	#[test]
 	fn test_file_creation() {
-		let temp_file:TempFile = temp_file();
-		assert!(!temp_file.0.exists());
-		temp_file.0.create().unwrap();
-		assert!(temp_file.0.exists());
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		assert!(!temp_file_ref.exists());
+		temp_file_ref.create().unwrap();
+		assert!(temp_file_ref.exists());
 	}
 
 	#[test]
 	fn test_file_write_and_read() {
-		let temp_file:TempFile = temp_file();
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
 
-		temp_file.0.create().unwrap();
+		temp_file_ref.create().unwrap();
 
 		let content = "Hello, world!";
-		temp_file.0.write(content).unwrap();
+		temp_file_ref.write(content).unwrap();
 
-		let read_content = temp_file.0.read().unwrap();
+		let read_content = temp_file_ref.read().unwrap();
 		assert_eq!(content, read_content);
 	}
 
 	#[test]
 	fn test_file_write_bytes_and_read_bytes() {
-		let temp_file:TempFile = temp_file();
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
 
-		temp_file.0.create().unwrap();
+		temp_file_ref.create().unwrap();
 
 		let content = b"Hello, binary world!";
-		temp_file.0.write_bytes(content).unwrap();
+		temp_file_ref.write_bytes(content).unwrap();
 
-		let read_content = temp_file.0.read_bytes().unwrap();
+		let read_content = temp_file_ref.read_bytes().unwrap();
 		assert_eq!(content, read_content.as_slice());
 	}
 
 	#[test]
 	fn test_append_bytes() {
-		let temp_file:TempFile = temp_file();
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
 		
-		temp_file.0.create().unwrap();
+		temp_file_ref.create().unwrap();
 
 		let initial_content = "Hello";
 		let append_content = ", world!";
-		temp_file.0.write(initial_content).unwrap();
-		temp_file.0.append_bytes(append_content.as_bytes()).unwrap();
+		temp_file_ref.write(initial_content).unwrap();
+		temp_file_ref.append_bytes(append_content.as_bytes()).unwrap();
 
-		let read_content = temp_file.0.read().unwrap();
+		let read_content = temp_file_ref.read().unwrap();
 		assert_eq!(read_content, "Hello, world!");
 	}
 
 	#[test]
 	fn test_read_range() {
-		let temp_file:TempFile = temp_file();
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
 
-		temp_file.0.create().unwrap();
+		temp_file_ref.create().unwrap();
 
 		let content = "Hello, world!";
-		temp_file.0.write(content).unwrap();
+		temp_file_ref.write(content).unwrap();
 
-		let range_content = temp_file.0.read_range(7, 12).unwrap();
+		let range_content = temp_file_ref.read_range(7, 12).unwrap();
 		assert_eq!(std::str::from_utf8(&range_content).unwrap(), "world");
 	}
 
 	#[test]
 	fn test_write_bytes_to_range() {
-		let temp_file:TempFile = temp_file();
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
 
-		temp_file.0.create().unwrap();
+		temp_file_ref.create().unwrap();
 
 		let content = "Hello, world!";
-		temp_file.0.write(content).unwrap();
+		temp_file_ref.write(content).unwrap();
 
 		let replacement = "Rust!";
-		temp_file.0.write_bytes_to_range(7, replacement.as_bytes()).unwrap();
+		temp_file_ref.write_bytes_to_range(7, replacement.as_bytes()).unwrap();
 
-		let read_content = temp_file.0.read().unwrap();
+		let read_content = temp_file_ref.read().unwrap();
 		assert_eq!(read_content, "Hello, Rust!!");
 	}
 
 	#[test]
 	fn test_file_deletion() {
-		let temp_file:TempFile = temp_file();
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
 
-		temp_file.0.create().unwrap();
-		assert!(temp_file.0.exists());
+		temp_file_ref.create().unwrap();
+		assert!(temp_file_ref.exists());
 
-		temp_file.0.delete().unwrap();
-		assert!(!temp_file.0.exists());
+		temp_file_ref.delete().unwrap();
+		assert!(!temp_file_ref.exists());
 	}
 
 	#[test]
 	fn test_file_copy() {
-		let temp_file:TempFile = temp_file();
-		let source_file_ref:FileRef = temp_file.0.clone();
-		let target_file_ref:FileRef = FileRef::new(&(temp_file.0.path().to_owned() + "_target.txt"));
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let source_file_ref = temp_file_ref.clone();
+		let target_file_ref = temp_file_ref + "_target.txt";
 
 		source_file_ref.create().unwrap();
 		let content = "Copy this content.";
