@@ -20,6 +20,16 @@ mod tests {
 	}
 
 	#[test]
+	fn test_include_self() {
+		let temp_file:TempFile = create_test_structure();
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_self();
+		let results:Vec<FileRef> = scanner.collect();
+		assert!(results.contains(&temp_file_ref));
+		assert_eq!(results.len(), 1);
+	}
+
+	#[test]
 	fn test_include_files() {
 		let temp_file:TempFile = create_test_structure();
 		let temp_file_ref:FileRef = FileRef::new(temp_file.path());

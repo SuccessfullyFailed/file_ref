@@ -4,12 +4,13 @@ use std::error::Error;
 
 
 pub type ResultFilter = Box<dyn Fn(&FileRef) -> bool>;
-struct FileScannerCursor { dir:FileRef, last_parsed_file:Option<FileRef> }
+struct FileScannerCursor { dir:FileRef, last_parsed_file:Option<FileRef>, parsed_self: bool }
 
 
 
 pub struct FileScanner {
 	source_dir:FileRef,
+	include_self:bool,
 	include_files:bool,
 	include_dirs:bool,
 	results_filter:ResultFilter,
@@ -26,13 +27,20 @@ impl FileScanner {
 		let source_dir:FileRef = source_dir.clone().absolute().trim_end_matches(SEPARATOR);
 		FileScanner {
 			source_dir: source_dir.clone(),
+			include_self: false,
 			include_files: false,
 			include_dirs: false,
 			results_filter: Box::new(|_| true),
 			recurse_filter: Box::new(|_| false),
 
-			cursor: FileScannerCursor { dir: source_dir, last_parsed_file: None }
+			cursor: FileScannerCursor { dir: source_dir, last_parsed_file: None, parsed_self: false }
 		}
+	}
+
+	/// Include source dir in final results.
+	pub fn include_self(mut self) -> Self {
+		self.include_self = true;
+		self
 	}
 
 	/// Return self with a setting to include files in the scan results.
@@ -73,7 +81,7 @@ impl FileScanner {
 	fn find_next_file_at_cursor(&mut self) -> Result<FileRef, Box<dyn Error>> {
 		
 		// Try to find file at cursor.
-		if let Ok(entry) = self.find_next_file_at(&self.cursor.dir, &self.cursor.last_parsed_file)  {
+		if let Ok(entry) = if !self.cursor.parsed_self && self.include_self && self.source_dir.exists() { Ok(self.source_dir.clone()) } else { self.find_next_file_at(&self.cursor.dir, &self.cursor.last_parsed_file) } {
 			if entry.is_dir() && (self.recurse_filter)(&entry) {
 				self.cursor.dir = entry.clone();
 				self.cursor.last_parsed_file = None;
@@ -81,6 +89,7 @@ impl FileScanner {
 				self.cursor.dir = entry.parent_dir()?;
 				self.cursor.last_parsed_file = Some(entry.clone());
 			}
+			self.cursor.parsed_self = true;
 			return Ok(entry);
 		}
 
