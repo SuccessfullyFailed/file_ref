@@ -366,23 +366,23 @@ impl FileRef {
 	}
 
 	/// Create a file-scanner on this dir that lists all files.
-	pub fn list_files(&self) -> FileScanner {
-		self.scanner().include_files()
+	pub fn list_files(&self) -> Vec<FileRef> {
+		self.scanner().include_files().collect()
 	}
 	
 	/// Create a file-scanner on this dir that lists all files recursively.
-	pub fn list_files_recurse(&self) -> FileScanner {
-		self.scanner().include_files().recurse()
+	pub fn list_files_recurse(&self) -> Vec<FileRef> {
+		self.scanner().include_files().recurse().collect()
 	}
 
 	/// Create a file-scanner on this dir that lists all dirs.
-	pub fn list_dirs(&self) -> FileScanner {
-		self.scanner().include_dirs()
+	pub fn list_dirs(&self) -> Vec<FileRef> {
+		self.scanner().include_dirs().collect()
 	}
 
 	/// Create a file-scanner on this dir that lists all dirs.
-	pub fn list_dirs_recurse(&self) -> FileScanner {
-		self.scanner().include_dirs().recurse()
+	pub fn list_dirs_recurse(&self) -> Vec<FileRef> {
+		self.scanner().include_dirs().recurse().collect()
 	}
 }
 impl Add<&str> for FileRef {
