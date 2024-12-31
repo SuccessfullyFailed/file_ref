@@ -23,14 +23,15 @@ impl FileScanner {
 
 	/// Create a new filter.
 	pub fn new(source_dir:&FileRef) -> FileScanner {
+		let source_dir:FileRef = source_dir.clone().absolute().trim_end_matches(SEPARATOR);
 		FileScanner {
-			source_dir: source_dir.clone().trim_end_matches(SEPARATOR),
+			source_dir: source_dir.clone(),
 			include_files: false,
 			include_dirs: false,
 			results_filter: Box::new(|_| true),
 			recurse_filter: Box::new(|_| false),
 
-			cursor: FileScannerCursor { dir: source_dir.clone(), last_parsed_file: None }
+			cursor: FileScannerCursor { dir: source_dir, last_parsed_file: None }
 		}
 	}
 
