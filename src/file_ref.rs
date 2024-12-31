@@ -7,6 +7,7 @@ use crate::FileScanner;
 // Could be chars, but will be used as str's mainly, so this stops the program from converting.
 pub(crate) const SEPARATOR:&str = "/";
 const INVALID_SEPARATOR:&str = "\\";
+const DOUBLE_SEPARATOR:&str = "//";
 
 
 
@@ -21,10 +22,39 @@ impl FileRef {
 
 	/// Create a new owned path.
 	pub fn new(path:&str) -> FileRef {
-		FileRef::Owned(path.replace(INVALID_SEPARATOR, SEPARATOR))
+		
+		// Fix incorrect or messy separators.
+		let mut path:String = path.replace(INVALID_SEPARATOR, SEPARATOR);
+		while path.contains(DOUBLE_SEPARATOR) {
+			path = path.replace(DOUBLE_SEPARATOR, SEPARATOR);
+		}
+
+
+		// Remove '..' where possible.
+		let mut nodes:Vec<&str> = path.split(SEPARATOR).collect();
+		if nodes.len() >= 2 {
+			let mut index:usize = 1;
+			while index < nodes.len() {
+				if nodes[index] == ".." && nodes[index - 1] != ".." {
+					nodes.remove(index);
+					nodes.remove(index - 1);
+					index = 0; // Restart after all modifications, required tow fix paths like a/b/../..
+				} else {
+					index += 1;
+				}
+			}
+		}
+		
+		// Remove './' if it's not the full path.
+		if nodes.contains(&".") && !nodes.iter().all(|node| *node == ".") {
+			nodes.retain(|node| *node != ".");
+		}
+
+		// Return new file.
+		FileRef::Owned(nodes.join(SEPARATOR))
 	}
 
-	/// Create a new statically borrowed path.
+	/// Create a new statically borrowed path. This may behave unexpectedly for messy paths (using '.' or '..').
 	pub const fn new_const(path:&'static str) -> FileRef {
 		FileRef::StaticStr(path)
 	}
@@ -45,7 +75,9 @@ impl FileRef {
 	pub fn parent_dir(&self) -> Result<FileRef, Box<dyn Error>> {
 		let path:&str = self.path();
 		let nodes:Vec<&str> = self.path_nodes();
-		if nodes.len() <= 1 {
+		if *nodes.last().unwrap_or(&"") == ".." {
+			Ok(self.clone() + "/..")
+		} else if nodes.len() <= 1 {
 			Err(format!("Could not get dir of file \"{path}\", as it only contains the file name.").into())
 		} else {
 			let parent_dir_len:usize = nodes[..nodes.len() - 1].join(SEPARATOR).len();

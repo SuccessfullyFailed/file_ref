@@ -20,6 +20,13 @@ mod tests {
 		let fs_path:FileRef = FileRef::new_const(PATH);
 		assert_eq!(fs_path.path(), PATH);
 	}
+	
+	#[test]
+	fn test_messy_path() {
+		let path:&str = "./dir1/dir2/..//../file.txt";
+		let fs_path:FileRef = FileRef::new(path);
+		assert_eq!(fs_path.path(), "file.txt");
+	}
 
 	#[test]
 	fn test_path() {
