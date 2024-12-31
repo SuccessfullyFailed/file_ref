@@ -12,7 +12,7 @@ const DISK_SEPARATOR:&str = ":";
 
 
 
-#[derive(Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Eq, PartialOrd, Ord)]
 pub enum FileRef {
 	StaticStr(&'static str),
 	Owned(String)
@@ -383,6 +383,11 @@ impl FileRef {
 	/// Create a file-scanner on this dir that lists all dirs.
 	pub fn list_dirs_recurse(&self) -> Vec<FileRef> {
 		self.scanner().include_dirs().recurse().collect()
+	}
+}
+impl PartialEq<FileRef> for FileRef {
+	fn eq(&self, other:&FileRef) -> bool {
+		self.path() == other.path() || self.clone().absolute().path() == other.clone().absolute().path()
 	}
 }
 impl Add<&str> for FileRef {
