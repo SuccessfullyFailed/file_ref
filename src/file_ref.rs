@@ -4,10 +4,11 @@ use crate::FileScanner;
 
 
 
-// Could be chars, but will be used as str's mainly, so this stops the program from converting.
+// Most could be chars, but will be used as str's mainly, so this stops the program from converting.
 pub(crate) const SEPARATOR:&str = "/";
 const INVALID_SEPARATOR:&str = "\\";
 const DOUBLE_SEPARATOR:&str = "//";
+const DISK_SEPARATOR:&str = ":";
 
 
 
@@ -59,6 +60,30 @@ impl FileRef {
 		FileRef::StaticStr(path)
 	}
 
+	/// Get the working dir of the application.
+	pub fn working_dir() -> FileRef {
+		FileRef::new(&std::env::current_dir().unwrap().display().to_string())
+	}
+
+	/// Return self with a absolute path.
+	pub fn absolute(self) -> FileRef {
+		if self.is_absolute_path() {
+			self
+		} else {
+			FileRef::working_dir() + "/" + self.path()
+		}
+	}
+
+	/// Return self with a relatvie path.
+	pub fn relative(self) -> FileRef {
+		let working_dir:FileRef = FileRef::working_dir();
+		if self.is_relative_path() || !self.contains(working_dir.path()) {
+			self
+		} else {
+			self.replace((working_dir + "/").path(), "")
+		}
+	}
+
 
 
 	/* PROPERTY GETTER METHODS */
@@ -93,6 +118,16 @@ impl FileRef {
 	/// Get the last node of the path.
 	pub(crate) fn last_node(&self) -> &str {
 		self.path().split(SEPARATOR).last().unwrap_or_default()
+	}
+
+	/// Check if the path is a relative or absolute path.
+	pub fn is_absolute_path(&self) -> bool {
+		self.contains(DISK_SEPARATOR)
+	}
+
+	/// Check if the path is a relative or absolute path.
+	pub fn is_relative_path(&self) -> bool {
+		!self.is_absolute_path()
 	}
 
 

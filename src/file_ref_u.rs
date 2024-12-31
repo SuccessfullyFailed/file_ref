@@ -20,6 +20,12 @@ mod tests {
 		let fs_path:FileRef = FileRef::new_const(PATH);
 		assert_eq!(fs_path.path(), PATH);
 	}
+
+	#[test]
+	fn test_path() {
+		let fs_path:FileRef = FileRef::new("dir/file.txt");
+		assert_eq!(fs_path.path(), "dir/file.txt");
+	}
 	
 	#[test]
 	fn test_messy_path() {
@@ -29,8 +35,16 @@ mod tests {
 	}
 
 	#[test]
-	fn test_path() {
-		let fs_path:FileRef = FileRef::new("dir/file.txt");
+	fn test_path_to_absolute() {
+		let path:&str = "dir/file.txt";
+		let fs_path:FileRef = FileRef::new(path).absolute();
+		assert!(fs_path.path().contains(":"), "Did not correctly create absolute path");
+	}
+
+	#[test]
+	fn test_path_to_relative() {
+		let path:String = std::env::current_dir().unwrap().display().to_string() + "/dir/file.txt";
+		let fs_path:FileRef = FileRef::new(&path).relative();
 		assert_eq!(fs_path.path(), "dir/file.txt");
 	}
 
