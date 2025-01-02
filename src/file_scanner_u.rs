@@ -64,7 +64,7 @@ mod tests {
 	fn test_filter() {
 		let temp_file:TempFile = create_test_structure();
 		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
-		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().recurse().with_filter(Box::new(|f| f.name().ends_with(".txt")));
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().recurse().with_filter(|f| f.name().ends_with(".txt"));
 		let results:Vec<FileRef> = scanner.collect();
 		assert!(results.iter().all(|f| f.name().ends_with(".txt")));
 		assert_eq!(results.len(), 4);
@@ -83,7 +83,7 @@ mod tests {
 	fn test_recurse_filter() {
 		let temp_file:TempFile = create_test_structure();
 		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
-		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().with_recurse_filter(Box::new(|d| d.name() != "subdir1"));
+		let scanner:FileScanner = FileScanner::new(&temp_file_ref).include_files().with_recurse_filter(|d| d.name() != "subdir1");
 		let results:Vec<FileRef> = scanner.collect();
 		assert!(results.iter().all(|f| !f.path().contains("subdir1")));
 	}

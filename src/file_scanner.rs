@@ -56,19 +56,19 @@ impl FileScanner {
 	}
 
 	/// Return self with a result filter.
-	pub fn with_filter(mut self, filter:ResultFilter) -> Self {
-		self.results_filter = filter;
+	pub fn with_filter<T>(mut self, filter:T) -> Self where T:Fn(&FileRef) -> bool + 'static {
+		self.results_filter = Box::new(filter);
 		self
 	}
 
 	/// Return self with a setting to recurse into sub-dirs.
 	pub fn recurse(self) -> Self {
-		self.with_recurse_filter(Box::new(|_| true))
+		self.with_recurse_filter(|_| true)
 	}
 
 	/// Return self with a recurse filter.
-	pub fn with_recurse_filter(mut self, filter:ResultFilter) -> Self {
-		self.recurse_filter = filter;
+	pub fn with_recurse_filter<T>(mut self, filter:T) -> Self where T:Fn(&FileRef) -> bool + 'static {
+		self.recurse_filter = Box::new(filter);
 		self
 	}
 
