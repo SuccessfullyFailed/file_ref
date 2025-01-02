@@ -1,5 +1,5 @@
+use core::fmt::{ self, Display, Debug, Formatter };
 use std::{error::Error, ops::{Add, AddAssign}};
-
 use crate::FileScanner;
 
 
@@ -400,6 +400,16 @@ impl Add<&str> for FileRef {
 impl AddAssign<&str> for FileRef {
 	fn add_assign(&mut self, rhs:&str) {
 		*self = FileRef::new(&(self.path().to_owned() + rhs));
+	}
+}
+impl Display for FileRef {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.path())
+	}
+}
+impl Debug for FileRef {
+	fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
+		write!(f, "{}", self.path())
 	}
 }
 
