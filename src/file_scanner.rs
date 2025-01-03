@@ -20,6 +20,7 @@ pub struct FileScanner {
 	include_dirs:bool,
 	results_filter:ResultFilter,
 	recurse_filter:ResultFilter,
+	use_cache:bool,
 
 	cursor:FileScannerCursor
 }
@@ -37,6 +38,7 @@ impl FileScanner {
 			include_dirs: false,
 			results_filter: Box::new(|_| true),
 			recurse_filter: Box::new(|_| false),
+			use_cache: false,
 
 			cursor: FileScannerCursor {
 				parsed_self: false,
@@ -80,6 +82,12 @@ impl FileScanner {
 	/// Return self with a recurse filter.
 	pub fn recurse_filter<T>(mut self, filter:T) -> Self where T:Fn(&FileRef) -> bool + 'static {
 		self.recurse_filter = Box::new(filter);
+		self
+	}
+
+	/// Use a cache to store files found earlier in directories. Will use more RAM obviously, but lessen the amount of times the algorithm needs to check folder entries. This will also ignore files added or moved after a folder has been scanned.
+	pub fn use_cache(mut self) -> Self {
+		self.use_cache = true;
 		self
 	}
 
@@ -191,14 +199,25 @@ impl FileScanner {
 		use std::fs::read_dir;
 
 		// Find in cache.
-		if let Some(cache_index) = self.cursor.entries_cache.iter().position(|(cache_dir, _)| cache_dir == dir) {
-			return &self.cursor.entries_cache[cache_index].1;
+		if self.use_cache {
+			if let Some(cache_index) = self.cursor.entries_cache.iter().position(|(cache_dir, _)| cache_dir == dir) {
+				return &self.cursor.entries_cache[cache_index].1;
+			}
 		}
 
-		// List entries in actual folder and store in cache.
+		// List entries in actual folder and store in cache. If cache is disabled, keep one result in the cache to be able to return a borrowed reference.
 		let entries:Vec<FileRef> = read_dir(dir.path()).map(|results| results.flatten().map(|dir_entry| FileRef::new(dir_entry.path().to_str().unwrap())).collect::<Vec<FileRef>>()).unwrap_or_default();
-		self.cursor.entries_cache.push((dir.clone(), entries));
-		&self.cursor.entries_cache.last().unwrap().1
+		if self.use_cache {
+			self.cursor.entries_cache.push((dir.clone(), entries));
+			&self.cursor.entries_cache.last().unwrap().1
+		} else {
+			if self.cursor.entries_cache.is_empty() {
+				self.cursor.entries_cache.push((dir.clone(), entries))
+			} else {
+				self.cursor.entries_cache[0] = (dir.clone(), entries);
+			}
+			&self.cursor.entries_cache[0].1
+		}
 	}
 }
 impl Iterator for FileScanner {
