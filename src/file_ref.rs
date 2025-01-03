@@ -282,8 +282,6 @@ impl FileRef {
 		
 		if self.is_dir() {
 			Err(format!("Could not write to dir \"{}\". Only able to write to files.", self.path()).into())
-		} else if !self.exists() {
-			Err(format!("Could not write to file \"{}\". File does not exist.", self.path()).into())
 		} else {
 			self.guarantee_exists()?;
 			let mut file:File = OpenOptions::new().write(true).truncate(true).open(self.path())?;
