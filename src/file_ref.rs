@@ -103,7 +103,11 @@ impl FileRef {
 		if *nodes.last().unwrap_or(&"") == ".." {
 			Ok(self.clone() + "/..")
 		} else if nodes.len() <= 1 {
-			Err(format!("Could not get dir of file \"{path}\", as it only contains the file name.").into())
+			if self.is_relative_path() {
+				self.clone().absolute().parent_dir()
+			} else {
+				Err(format!("Could not get dir of file \"{path}\", as it only contains the file name.").into())
+			}
 		} else {
 			let parent_dir_len:usize = nodes[..nodes.len() - 1].join(SEPARATOR).len();
 			Ok(FileRef::new(&path[..parent_dir_len]))
