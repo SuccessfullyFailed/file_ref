@@ -14,7 +14,7 @@ struct FileScannerCursor {
 
 
 pub struct FileScanner {
-	source_dir:FileRef,
+	root_dir:FileRef,
 	include_self:bool,
 	include_files:bool,
 	include_dirs:bool,
@@ -28,10 +28,10 @@ impl FileScanner {
 	/* CONSTRUCTOR METHODS */
 
 	/// Create a new filter.
-	pub fn new(source_dir:&FileRef) -> FileScanner {
-		let source_dir:FileRef = source_dir.clone().absolute().trim_end_matches(SEPARATOR);
+	pub fn new(root_dir:&FileRef) -> FileScanner {
+		let root_dir:FileRef = root_dir.clone().absolute().trim_end_matches(SEPARATOR);
 		FileScanner {
-			source_dir: source_dir.clone(),
+			root_dir: root_dir.clone(),
 			include_self: false,
 			include_files: false,
 			include_dirs: false,
@@ -66,19 +66,19 @@ impl FileScanner {
 		self
 	}
 
-	/// Return self with a result filter.
-	pub fn with_filter<T>(mut self, filter:T) -> Self where T:Fn(&FileRef) -> bool + 'static {
+	/// Return self with a result filter. Overwrites the default filter function to filter out entries during the search process, rather than after being returned.
+	pub fn filter<T>(mut self, filter:T) -> Self where T:Fn(&FileRef) -> bool + 'static {
 		self.results_filter = Box::new(filter);
 		self
 	}
 
 	/// Return self with a setting to recurse into sub-dirs.
 	pub fn recurse(self) -> Self {
-		self.with_recurse_filter(|_| true)
+		self.recurse_filter(|_| true)
 	}
 
 	/// Return self with a recurse filter.
-	pub fn with_recurse_filter<T>(mut self, filter:T) -> Self where T:Fn(&FileRef) -> bool + 'static {
+	pub fn recurse_filter<T>(mut self, filter:T) -> Self where T:Fn(&FileRef) -> bool + 'static {
 		self.recurse_filter = Box::new(filter);
 		self
 	}
@@ -94,14 +94,14 @@ impl FileScanner {
 		// Parse self if necessary.
 		if !self.cursor.parsed_self {
 			self.cursor.parsed_self = true;
-			if self.include_self && self.source_dir.exists() && (self.results_filter)(&self.source_dir) {
-				return Some(self.source_dir.clone());
+			if self.include_self && self.root_dir.exists() && (self.results_filter)(&self.root_dir) {
+				return Some(self.root_dir.clone());
 			}
 		}
 
 		// If no current dir exists, start at root dir.
 		if self.cursor.current_dir.is_none() {
-			self.cursor.current_dir = Some(self.source_dir.clone());
+			self.cursor.current_dir = Some(self.root_dir.clone());
 		}
 
 		// Try to find the next item in the current dir.
@@ -122,7 +122,7 @@ impl FileScanner {
 		// If not found in any sub-dirs, keep moving to parent dirs while keeping inside the source dir.
 		if let Some(mut current_dir) = self.cursor.current_dir.clone() {
 			if let Ok(mut parent_dir) = current_dir.parent_dir() {
-				while parent_dir.contains(&self.source_dir.path()) {
+				while parent_dir.contains(&self.root_dir.path()) {
 
 					// Find new sub-dirs in the parent dir, below the current dir.
 					let parent_dir_sub_dirs:Vec<FileRef> = parent_dir.list_dirs();
