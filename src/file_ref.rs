@@ -273,15 +273,35 @@ impl FileRef {
 
 	/// Write a string to the file.
 	pub fn write(&self, contents:&str) -> Result<(), Box<dyn Error>> {
+		self._write(contents, false)
+	}
+
+	/// Write a string to the file and wait until the file has finished.
+	pub fn write_await(&self, contents:&str) -> Result<(), Box<dyn Error>> {
+		self._write(contents, true)
+	}
+
+	/// Write a string to the file.
+	fn _write(&self, contents:&str, await_finish:bool) -> Result<(), Box<dyn Error>> {
 		if self.is_dir() {
 			Err(format!("Could not write to dir \"{}\". Only able to write to files.", self.path()).into())
 		} else {
-			self.write_bytes(contents.to_string().as_bytes())
+			self._write_bytes(contents.to_string().as_bytes(), await_finish)
 		}
 	}
 
 	/// Write bytes to the file.
 	pub fn write_bytes(&self, data:&[u8]) -> Result<(), Box<dyn Error>> {
+		self._write_bytes(data, false)
+	}
+
+	/// Write bytes to the file and wait until the file has finished.
+	pub fn write_bytes_await(&self, data:&[u8]) -> Result<(), Box<dyn Error>> {
+		self._write_bytes(data, true)
+	}
+
+	/// Write bytes to the file.
+	fn _write_bytes(&self, data:&[u8], await_finish:bool) -> Result<(), Box<dyn Error>> {
 		use std::{ fs::{ File, OpenOptions }, io::Write };
 		
 		if self.is_dir() {
@@ -290,12 +310,25 @@ impl FileRef {
 			self.guarantee_exists()?;
 			let mut file:File = OpenOptions::new().write(true).truncate(true).open(self.path())?;
 			file.write_all(data)?;
+			if await_finish {
+				file.flush()?;
+			}
 			Ok(())
 		}
 	}
-	
+
 	/// Read a specific range of bytes from the file.
 	pub fn write_bytes_to_range(&self, start:u64, data:&[u8]) -> Result<(), Box<dyn Error>> {
+		self._write_bytes_to_range(start, data, false)
+	}
+
+	/// Read a specific range of bytes from the file and wait until the file has finished.
+	pub fn write_bytes_to_range_await(&self, start:u64, data:&[u8]) -> Result<(), Box<dyn Error>> {
+		self._write_bytes_to_range(start, data, true)
+	}
+
+	/// Read a specific range of bytes from the file.
+	fn _write_bytes_to_range(&self, start:u64, data:&[u8], await_finish:bool) -> Result<(), Box<dyn Error>> {
 		use std::{ fs::{ File, OpenOptions }, io::{ Write, Seek, SeekFrom } };
 
 		if self.is_dir() {
@@ -305,12 +338,26 @@ impl FileRef {
 		} else {
 			let mut file:File = OpenOptions::new().write(true).open(self.path())?;
 			file.seek(SeekFrom::Start(start))?;
-			file.write_all(data).map_err(|error| error.into())
+			file.write_all(data)?;
+			if await_finish {
+				file.flush()?;
+			}
+			Ok(())
 		}
 	}
 
 	/// Append bytes to the file.
 	pub fn append_bytes(&self, data:&[u8]) -> Result<(), Box<dyn Error>> {
+		self._append_bytes(data, false)
+	}
+
+	/// Append bytes to the file and wait until the file has finished.
+	pub fn append_bytes_await(&self, data:&[u8]) -> Result<(), Box<dyn Error>> {
+		self._append_bytes(data, true)
+	}
+
+	/// Append bytes to the file.
+	fn _append_bytes(&self, data:&[u8], await_finish:bool) -> Result<(), Box<dyn Error>> {
 		use std::{ fs::{ File, OpenOptions }, io::Write };
 
 		if self.is_dir() {
@@ -321,6 +368,9 @@ impl FileRef {
 			self.guarantee_exists()?;
 			let mut file:File = OpenOptions::new().append(true).open(self.path())?;
 			file.write_all(data)?;
+			if await_finish {
+				file.flush()?;
+			}
 			Ok(())
 		}
 	}
