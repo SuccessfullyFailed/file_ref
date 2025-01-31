@@ -115,7 +115,7 @@ checksum = "a210d160f08b701c8721ba1c726c11662f877ea6b7094007e1ca9a1041945034"
 [[package]]
 name = "unit_test_support"
 version = "0.1.0"
-source = "git+https://github.com/SuccessfullyFailed/unit_test_support.git#d7ae2cf647b2d8a95d0a5925fd951199d3dc994a"
+source = "git+https://github.com/SuccessfullyFailed/unit_test_support.git#52513141dcd5c9f82c4a8bbd5d17fa7fb9f64205"
 dependencies = [
  "rand",
 ]
