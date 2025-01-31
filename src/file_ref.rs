@@ -142,16 +142,6 @@ impl FileRef {
 
 	/* PROPERTY GETTER METHODS */
 
-	/// Check if self is a dir.
-	pub fn is_dir(&self) -> bool {
-		self.extension().map(|extension| extension.is_empty()).unwrap_or(true)
-	}
-
-	/// Check if self is a file.
-	pub fn is_file(&self) -> bool {
-		!self.is_dir()
-	}
-
 	/// Get the name of the file/dir.
 	pub fn name(&self) -> &str {
 		self.last_node()
@@ -175,6 +165,22 @@ impl FileRef {
 	/// Check if the files exists.
 	pub fn exists(&self) -> bool {
 		std::path::Path::new(&self.path()).exists() && std::fs::metadata(&self.path()).is_ok()
+	}
+
+	/// Check if self is a dir.
+	pub fn is_dir(&self) -> bool {
+		// Check metadata if exists, otherwise check extension.
+		if self.exists() {
+			if let Ok(metadata) = std::fs::metadata(&self.path()) {
+				return metadata.is_dir();
+			}
+		}
+		self.extension().map(|extension| extension.is_empty()).unwrap_or(true)
+	}
+
+	/// Check if self is a file.
+	pub fn is_file(&self) -> bool {
+		!self.is_dir()
 	}
 	
 	/// Check if the file can be accessed.
