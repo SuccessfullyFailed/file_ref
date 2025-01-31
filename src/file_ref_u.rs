@@ -56,9 +56,22 @@ mod tests {
 	}
 
 	#[test]
-	fn test_parent_dir_root() {
+	fn test_parent_dir_relative_root() {
 		let fs_path:FileRef = FileRef::new("file.txt");
+		assert_eq!(fs_path.parent_dir().unwrap(), FileRef::working_dir());
+	}
+
+	#[test]
+	fn test_parent_dir_absolute_root() {
+		let fs_path:FileRef = FileRef::new("C:");
+		println!("{:?}", fs_path.parent_dir());
 		assert!(fs_path.parent_dir().is_err());
+	}
+
+	#[test]
+	fn test_parent_dir_ends_with_slash() {
+		let fs_path:FileRef = FileRef::new("test1/test2/");
+		assert_eq!(fs_path.parent_dir().unwrap().path(), "test1");
 	}
 
 	#[test]

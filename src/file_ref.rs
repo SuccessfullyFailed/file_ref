@@ -116,7 +116,11 @@ impl FileRef {
 
 	/// Get a list of nodes in the path.
 	pub(crate) fn path_nodes(&self) -> Vec<&str> {
-		self.path().split(SEPARATOR).collect()
+		let mut parts:Vec<&str> = self.path().split(SEPARATOR).collect();
+		while parts.last() == Some(&"") {
+			parts.remove(parts.len() - 1);
+		}
+		parts
 	}
 
 	/// Get the last node of the path.
