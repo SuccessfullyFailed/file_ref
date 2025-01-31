@@ -1,7 +1,6 @@
 #[cfg(test)]
 mod tests {
-	use unit_test_support::TempFile;
-	use crate::FileRef;
+	use crate::{ FileRef, unit_test_support::TempFile };
 	
 
 

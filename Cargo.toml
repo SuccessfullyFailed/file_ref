@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-unit_test_support={ git="https://github.com/SuccessfullyFailed/unit_test_support.git" }
+rand = "0.9.0"
