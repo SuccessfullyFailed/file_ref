@@ -48,6 +48,13 @@ mod tests {
 	}
 
 	#[test]
+	fn test_relative_path_to() {
+		let path:FileRef = FileRef::new("C:/users/Me/Desktop/file.txt");
+		let fs_path:FileRef = FileRef::new("C:/users/Me/Download/cracked_version_of_free_tool/definitely_not_a_virus.exe");
+		assert_eq!(path.relative_path_to(&fs_path).path(), "../../Download/cracked_version_of_free_tool/definitely_not_a_virus.exe");
+	}
+
+	#[test]
 	fn test_parent_dir() {
 		let fs_path:FileRef = FileRef::new("dir/subdir/file.txt");
 		let parent:FileRef = fs_path.parent_dir().unwrap();

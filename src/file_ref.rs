@@ -84,6 +84,26 @@ impl FileRef {
 		}
 	}
 
+	/// Create a relative path from self to another path.
+	pub fn relative_path_to(&self, target:&FileRef) -> FileRef {
+
+		// Process both paths as equal as possible.
+		let source_path:FileRef = self.clone().absolute();
+		let target_path:FileRef = target.clone().absolute();
+		let mut source_steps:Vec<&str> = source_path.path_nodes();
+		let mut target_steps:Vec<&str> = target_path.path_nodes();
+
+		// Remove equal parts.
+		while !source_steps.is_empty() && !target_steps.is_empty() && source_steps[0] == target_steps[0] {
+			source_steps.remove(0);
+			target_steps.remove(0);
+		}
+
+		// Calculate and return path from remaining steps.
+		let relative_path:String = [source_steps.iter().map(|_| "..").collect::<Vec<&str>>(), target_steps].iter().flatten().copied().collect::<Vec<&str>>().join(SEPARATOR);
+		FileRef::new(&relative_path)
+	}
+
 
 
 	/* PROPERTY GETTER METHODS */

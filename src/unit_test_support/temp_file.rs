@@ -4,8 +4,8 @@ use crate::FileRef;
 
 
 const TEMP_FILE_DIR:&str = "target/unit_test_support/";
-static mut RESERVED_FILES:Mutex<Vec<FileRef>> = Mutex::new(Vec::new());
-static mut RESERVED_FILE_INDEX:Mutex<usize> = Mutex::new(0);
+static RESERVED_FILES:Mutex<Vec<FileRef>> = Mutex::new(Vec::new());
+static RESERVED_FILE_INDEX:Mutex<usize> = Mutex::new(0);
 
 
 
@@ -19,7 +19,7 @@ impl TempFile {
 	pub fn new(extension:Option<&str>) -> TempFile {
 
 		// Get lock to assure the creation of the directory and the creating of the file name only happens once at a time.
-		let reserved_files:&mut Vec<FileRef> = unsafe { &mut *RESERVED_FILES.lock().unwrap() };
+		let reserved_files:&mut Vec<FileRef> = &mut *RESERVED_FILES.lock().unwrap();
 
 		// Make sure TEMP_FILE_DIR exists.
 		let mut tmp_path:String = String::from(".");
@@ -47,7 +47,7 @@ impl TempFile {
 
 	/// Generate a random file name.
 	fn get_file_name() -> String {
-		format!("{:#08}", unsafe {
+		format!("{:#08}", {
 			let id_fetcher = &mut *RESERVED_FILE_INDEX.lock().unwrap();
 			*id_fetcher += 1;
 			*id_fetcher
@@ -73,7 +73,7 @@ impl Drop for TempFile {
 		}
 
 		// Remove from reserved files.
-		let reserved_files:&mut Vec<FileRef> = unsafe { &mut *RESERVED_FILES.lock().unwrap() };
+		let reserved_files:&mut Vec<FileRef> = &mut *RESERVED_FILES.lock().unwrap();
 		if let Some(index) = reserved_files.iter().position(|entry| entry == &self.0) {
 			reserved_files.remove(index);
 
