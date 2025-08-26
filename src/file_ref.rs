@@ -13,16 +13,14 @@ const DISK_SEPARATOR:&str = ":";
 
 
 #[derive(Clone, Eq, PartialOrd, Ord)]
-pub enum FileRef {
+enum FilePath {
 	StaticStr(&'static str),
 	Owned(String)
 }
-impl FileRef {
-
-	/* CONSTRUCTOR METHODS */
+impl FilePath {
 
 	/// Create a new owned path.
-	pub fn new(path:&str) -> FileRef {
+	fn new(path:&str) -> FilePath {
 		
 		// Fix incorrect or messy separators.
 		let mut path:String = path.replace(INVALID_SEPARATOR, SEPARATOR);
@@ -52,12 +50,44 @@ impl FileRef {
 		}
 
 		// Return new file.
-		FileRef::Owned(nodes.join(SEPARATOR))
+		FilePath::Owned(nodes.join(SEPARATOR))
+	}
+
+	/// Create a new statically borrowed path. This may behave unexpectedly for messy paths (using '.' or '..').
+	const fn new_const(path:&'static str) -> FilePath {
+		FilePath::StaticStr(path)
+	}
+
+	/// Get the raw path.
+	fn path(&self) -> &str {
+		match self {
+			FilePath::StaticStr(path) => *path,
+			FilePath::Owned(path) => path.as_str()
+		}
+	}
+}
+impl PartialEq<FilePath> for FilePath {
+	fn eq(&self, other:&FilePath) -> bool {
+		self.path() == other.path()
+	}
+}
+
+
+
+#[derive(Clone, Eq, PartialOrd, Ord)]
+pub struct FileRef(FilePath);
+impl FileRef {
+
+	/* CONSTRUCTOR METHODS */
+
+	/// Create a new owned path.
+	pub fn new(path:&str) -> FileRef {
+		FileRef(FilePath::new(path))
 	}
 
 	/// Create a new statically borrowed path. This may behave unexpectedly for messy paths (using '.' or '..').
 	pub const fn new_const(path:&'static str) -> FileRef {
-		FileRef::StaticStr(path)
+		FileRef(FilePath::new_const(path))
 	}
 
 	/// Get the working dir of the application.
@@ -110,10 +140,7 @@ impl FileRef {
 
 	/// Get the raw path.
 	pub fn path(&self) -> &str {
-		match self {
-			FileRef::StaticStr(path) => *path,
-			FileRef::Owned(path) => path.as_str()
-		}
+		self.0.path()
 	}
 
 	/// Get the directory the file is in.
