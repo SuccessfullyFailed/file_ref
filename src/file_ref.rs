@@ -403,6 +403,16 @@ impl FileRef {
 		}
 	}
 
+	/// Append a string to the file. Writes it to the file on disk.
+	pub fn append(&self, contents:&str) -> Result<(), Box<dyn Error>> {
+		self._append_bytes(contents.to_string().as_bytes(), false)
+	}
+
+	/// Append a string to the file and wait until the file has finished. Writes it to the file on disk.
+	pub fn append_await(&self, contents:&str) -> Result<(), Box<dyn Error>> {
+		self._append_bytes(contents.to_string().as_bytes(), true)
+	}
+
 	/// Append bytes to the file.
 	pub fn append_bytes(&self, data:&[u8]) -> Result<(), Box<dyn Error>> {
 		self._append_bytes(data, false)
