@@ -75,10 +75,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 	// 4. Copy images to TEMP_FILE, log actions
 	for image in png_images {
 		if image.exists() {
-			log_file.append(&format!("[INFO] copying {image} to {TEMP_FILE}\n"))?;
+			log_file.append(format!("[INFO] copying {image} to {TEMP_FILE}\n"))?;
 			image.copy_to(&TEMP_FILE)?;
 		} else {
-			log_file.append(&format!("[WARNING] file {image} does not exist\n"))?;
+			log_file.append(format!("[WARNING] file {image} does not exist\n"))?;
 		}
 	}
 
