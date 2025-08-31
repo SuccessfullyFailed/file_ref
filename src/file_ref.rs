@@ -329,21 +329,21 @@ impl FileRef {
 	}
 
 	/// Write a string to the file.
-	pub fn write(&self, contents:&str) -> Result<(), Box<dyn Error>> {
+	pub fn write(&self, contents:String) -> Result<(), Box<dyn Error>> {
 		self._write(contents, false)
 	}
 
 	/// Write a string to the file and wait until the file has finished.
-	pub fn write_await(&self, contents:&str) -> Result<(), Box<dyn Error>> {
+	pub fn write_await(&self, contents:String) -> Result<(), Box<dyn Error>> {
 		self._write(contents, true)
 	}
 
 	/// Write a string to the file.
-	fn _write(&self, contents:&str, await_finish:bool) -> Result<(), Box<dyn Error>> {
+	fn _write(&self, contents:String, await_finish:bool) -> Result<(), Box<dyn Error>> {
 		if self.is_dir() {
 			Err(format!("Could not write to dir \"{}\". Only able to write to files.", self.path()).into())
 		} else {
-			self._write_bytes(contents.to_string().as_bytes(), await_finish)
+			self._write_bytes(contents.as_bytes(), await_finish)
 		}
 	}
 
@@ -404,13 +404,13 @@ impl FileRef {
 	}
 
 	/// Append a string to the file. Writes it to the file on disk.
-	pub fn append(&self, contents:&str) -> Result<(), Box<dyn Error>> {
-		self._append_bytes(contents.to_string().as_bytes(), false)
+	pub fn append(&self, contents:String) -> Result<(), Box<dyn Error>> {
+		self._append_bytes(contents.as_bytes(), false)
 	}
 
 	/// Append a string to the file and wait until the file has finished. Writes it to the file on disk.
-	pub fn append_await(&self, contents:&str) -> Result<(), Box<dyn Error>> {
-		self._append_bytes(contents.to_string().as_bytes(), true)
+	pub fn append_await(&self, contents:String) -> Result<(), Box<dyn Error>> {
+		self._append_bytes(contents.as_bytes(), true)
 	}
 
 	/// Append bytes to the file.

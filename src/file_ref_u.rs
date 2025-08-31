@@ -201,7 +201,7 @@ mod tests {
 		temp_file_ref.create().unwrap();
 
 		let content:&str = "Hello, world!";
-		temp_file_ref.write(content).unwrap();
+		temp_file_ref.write(content.to_string()).unwrap();
 
 		let read_content = temp_file_ref.read().unwrap();
 		assert_eq!(content, read_content);
@@ -230,7 +230,7 @@ mod tests {
 
 		let initial_content:&str = "Hello";
 		let append_content:&str = ", world!";
-		temp_file_ref.write(initial_content).unwrap();
+		temp_file_ref.write(initial_content.to_string()).unwrap();
 		temp_file_ref.append_bytes(append_content.as_bytes()).unwrap();
 
 		let read_content = temp_file_ref.read().unwrap();
@@ -245,7 +245,7 @@ mod tests {
 		temp_file_ref.create().unwrap();
 
 		let content:&str = "Hello, world!";
-		temp_file_ref.write(content).unwrap();
+		temp_file_ref.write(content.to_string()).unwrap();
 
 		let range_content:Vec<u8> = temp_file_ref.read_range(7, 12).unwrap();
 		assert_eq!(std::str::from_utf8(&range_content).unwrap(), "world");
@@ -259,7 +259,7 @@ mod tests {
 		temp_file_ref.create().unwrap();
 
 		let content:&str = "Hello, world!";
-		temp_file_ref.write(content).unwrap();
+		temp_file_ref.write(content.to_string()).unwrap();
 
 		let replacement = "Rust!";
 		temp_file_ref.write_bytes_to_range(7, replacement.as_bytes()).unwrap();
@@ -289,7 +289,7 @@ mod tests {
 
 		source_file_ref.create().unwrap();
 		let content:&str = "Copy this content.";
-		source_file_ref.write(content).unwrap();
+		source_file_ref.write(content.to_string()).unwrap();
 
 		source_file_ref.copy_to(&target_file_ref).unwrap();
 		assert!(target_file_ref.exists());
