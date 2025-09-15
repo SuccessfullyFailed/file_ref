@@ -1,6 +1,10 @@
 [package]
-name = "file_ref"
-version = "0.1.0"
-edition = "2021"
+name="file_ref"
+version="0.1.1"
+edition="2021"
 
 [dependencies]
+winapi={ version="0.3.9", features=["winbase", "fileapi", "handleapi", "winnt", "minwinbase", "synchapi", "errhandlingapi"], optional=true }
+
+[features]
+dir_monitor=["winapi"]

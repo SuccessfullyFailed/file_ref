@@ -1,5 +1,5 @@
 use core::fmt::{ self, Display, Debug, Formatter };
-use std::{error::Error, ops::{Add, AddAssign}};
+use std::{ error::Error, ops::{ Add, AddAssign } };
 use crate::FileScanner;
 
 
@@ -13,14 +13,14 @@ const DISK_SEPARATOR:&str = ":";
 
 
 #[derive(Clone, Eq, PartialOrd, Ord)]
-enum FilePath {
+pub(crate) enum FilePath {
 	StaticStr(&'static str),
 	Owned(String)
 }
 impl FilePath {
 
 	/// Create a new owned path.
-	fn new(path:&str) -> FilePath {
+	pub fn new(path:&str) -> FilePath {
 		
 		// Fix incorrect or messy separators.
 		let mut path:String = path.replace(INVALID_SEPARATOR, SEPARATOR);
@@ -54,12 +54,12 @@ impl FilePath {
 	}
 
 	/// Create a new statically borrowed path. This may behave unexpectedly for messy paths (using '.' or '..').
-	const fn new_const(path:&'static str) -> FilePath {
+	pub const fn new_const(path:&'static str) -> FilePath {
 		FilePath::StaticStr(path)
 	}
 
 	/// Get the raw path.
-	fn path(&self) -> &str {
+	pub fn path(&self) -> &str {
 		match self {
 			FilePath::StaticStr(path) => *path,
 			FilePath::Owned(path) => path.as_str()
