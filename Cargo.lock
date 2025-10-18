@@ -4,7 +4,7 @@ version = 4
 
 [[package]]
 name = "file_ref"
-version = "0.1.0"
+version = "0.1.2"
 dependencies = [
  "winapi",
 ]

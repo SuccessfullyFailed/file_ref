@@ -1,5 +1,5 @@
 use core::fmt::{ self, Display, Debug, Formatter };
-use std::{ error::Error, ops::{ Add, AddAssign } };
+use std::{ error::Error, fs::Metadata, ops::{ Add, AddAssign } };
 use crate::FileScanner;
 
 
@@ -233,6 +233,32 @@ impl FileRef {
 	/// Check if the file can be accessed.
 	pub fn is_accessible(&self) -> bool {
 		if self.is_dir() { true } else { std::fs::File::open(&self.path()).is_ok() }
+	}
+
+
+
+	/* METADATA METHODS */
+	
+	/// Get the metadata of the file.
+	fn metadata(&self) -> Result<Metadata, Box<dyn Error>> {
+		if self.is_dir() {
+			Err(format!("Could not get metadata, file {self}, path is a directory.").into())
+		} else if !self.exists() {
+			Err(format!("Could not get metadata, file {self} does not exist").into())
+		} else {
+			Ok(std::fs::File::open(self.path())?.metadata()?)
+		}
+	}
+
+	/// Get the amount of bytes the file is.
+	pub fn bytes_size(&self) -> u64 {
+		if !self.exists() {
+			0
+		} else if self.is_dir() {
+			self.list_files_recurse().iter().map(|file| file.bytes_size()).sum()
+		} else {
+			self.metadata().map(|data| data.len()).unwrap_or(0)
+		}
 	}
 
 
@@ -602,7 +628,6 @@ impl_inherit_str!(rfind, Option<usize>, (needle:&str));
 impl_inherit_str!(split_at, (&str, &str), (mid:usize));
 impl_inherit_str!(chars, std::str::Chars<'_>);
 impl_inherit_str!(char_indices, std::str::CharIndices<'_>);
-impl_inherit_str!(bytes, std::str::Bytes<'_>);
 impl_inherit_str!(lines, std::str::Lines<'_>);
 impl_inherit_str!(split_whitespace, std::str::SplitWhitespace<'_>);
 impl_inherit_str!(split, std::str::Split<'_, char>, (sep:char));

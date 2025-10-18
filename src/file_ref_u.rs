@@ -182,6 +182,20 @@ mod tests {
 
 
 
+	/* METADATA TESTS */
+
+	#[test]
+	fn test_bytes_size() {
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		for length in [2, 4, 8, 16] {
+			temp_file_ref.write("x".repeat(length)).unwrap();
+			assert_eq!(temp_file_ref.bytes_size(), length as u64);
+		}
+	}
+
+
+
 	/* FILE MODIFICATION TESTS */
 
 	#[test]
