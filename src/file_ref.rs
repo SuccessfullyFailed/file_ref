@@ -501,6 +501,20 @@ impl FileRef {
 
 	/* FILE MOVING METHODS */
 
+	/// Move the file to another location.
+	pub fn move_to(&self, target:&FileRef) -> Result<(), Box<dyn Error>> {
+		use std::fs::rename;
+
+		if self.is_dir() {
+			Err(format!("Could not copy dir \"{}\". Only able to copy files.", self.path()).into())
+		} else if !self.exists() {
+			Err(format!("Could not copy file \"{}\". File does not exist.", self.path()).into())
+		} else {
+			target.guarantee_parent_dir()?;
+			rename(self.path(), target.path()).map_err(|error| error.into())
+		}
+	}
+
 	/// Copy the file to another location. Returns the number of bytes written.
 	pub fn copy_to(&self, target:&FileRef) -> Result<u64, Box<dyn Error>> {
 		use std::fs::copy;

@@ -337,22 +337,44 @@ mod tests {
 		assert!(!temp_file_ref.exists());
 	}
 
+
+
+	/* FILE MOVING TESTS */
+
 	#[test]
 	fn test_file_copy() {
 		let temp_file:TempFile = TempFile::new(Some("txt"));
 		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
-		let source_file_ref = temp_file_ref.clone();
-		let target_file_ref = temp_file_ref + "_target.txt";
+		let source_file_ref:FileRef = temp_file_ref.clone();
+		let target_file_ref:FileRef = temp_file_ref + "_target.txt";
 
 		source_file_ref.create().unwrap();
 		let content:&str = "Copy this content.";
 		source_file_ref.write(content.to_string()).unwrap();
 
 		source_file_ref.copy_to(&target_file_ref).unwrap();
+		assert!(source_file_ref.exists());
 		assert!(target_file_ref.exists());
+		assert_eq!(content, target_file_ref.read().unwrap());
 
-		let copied_content = target_file_ref.read().unwrap();
-		assert_eq!(content, copied_content);
+		target_file_ref.delete().unwrap();
+	}
+
+	#[test]
+	fn test_file_move() {
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		let source_file_ref:FileRef = temp_file_ref.clone();
+		let target_file_ref:FileRef = temp_file_ref + "_target.txt";
+
+		source_file_ref.create().unwrap();
+		let content:&str = "Copy this content.";
+		source_file_ref.write(content.to_string()).unwrap();
+
+		source_file_ref.move_to(&target_file_ref).unwrap();
+		assert!(!source_file_ref.exists());
+		assert!(target_file_ref.exists());
+		assert_eq!(content, target_file_ref.read().unwrap());
 
 		target_file_ref.delete().unwrap();
 	}
