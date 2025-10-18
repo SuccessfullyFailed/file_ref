@@ -1,6 +1,8 @@
 #[cfg(test)]
 mod tests {
+	use std::{ thread::sleep, time::{ Duration, SystemTime } };
 	use crate::{ FileRef, unit_test_support::TempFile };
+
 	
 
 
@@ -192,6 +194,47 @@ mod tests {
 			temp_file_ref.write("x".repeat(length)).unwrap();
 			assert_eq!(temp_file_ref.bytes_size(), length as u64);
 		}
+	}
+
+	#[test]
+	fn test_dates() {
+		let temp_file:TempFile = TempFile::new(Some("txt"));
+		let temp_file_ref:FileRef = FileRef::new(temp_file.path());
+		temp_file_ref.write("X".to_string()).unwrap();
+
+		// Initial file create.
+		let time_create:SystemTime = temp_file_ref.get_time_creation().unwrap();
+		let time_modify:SystemTime = temp_file_ref.get_time_modification().unwrap();
+		let time_access:SystemTime = temp_file_ref.get_time_accessed().unwrap();
+
+		assert!(time_create.elapsed().unwrap().as_millis() < 10);
+		assert!(time_modify.elapsed().unwrap().as_millis() < 10);
+		assert!(time_access.elapsed().unwrap().as_millis() < 10);
+
+		// Access after read.
+		sleep(Duration::from_millis(100));
+		temp_file_ref.read().unwrap();
+		let time_create:SystemTime = temp_file_ref.get_time_creation().unwrap();
+		let time_modify:SystemTime = temp_file_ref.get_time_modification().unwrap();
+		let time_access:SystemTime = temp_file_ref.get_time_accessed().unwrap();
+
+		assert!(time_create.elapsed().unwrap().as_millis() > 90);
+		assert!(time_create.elapsed().unwrap().as_millis() < 110);
+		assert!(time_modify.elapsed().unwrap().as_millis() > 90);
+		assert!(time_modify.elapsed().unwrap().as_millis() < 110);
+		assert!(time_access.elapsed().unwrap().as_millis() < 10);
+
+		// Access after write.
+		sleep(Duration::from_millis(100));
+		temp_file_ref.write("O".to_string()).unwrap();
+		let time_create:SystemTime = temp_file_ref.get_time_creation().unwrap();
+		let time_modify:SystemTime = temp_file_ref.get_time_modification().unwrap();
+		let time_access:SystemTime = temp_file_ref.get_time_accessed().unwrap();
+
+		assert!(time_create.elapsed().unwrap().as_millis() > 190);
+		assert!(time_create.elapsed().unwrap().as_millis() < 210);
+		assert!(time_modify.elapsed().unwrap().as_millis() < 10);
+		assert!(time_access.elapsed().unwrap().as_millis() < 10);
 	}
 
 

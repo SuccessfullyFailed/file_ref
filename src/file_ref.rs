@@ -1,5 +1,5 @@
+use std::{ error::Error, time::SystemTime, fs::{ Metadata, Permissions }, ops::{ Add, AddAssign } };
 use core::fmt::{ self, Display, Debug, Formatter };
-use std::{ error::Error, fs::Metadata, ops::{ Add, AddAssign } };
 use crate::FileScanner;
 
 
@@ -259,6 +259,35 @@ impl FileRef {
 		} else {
 			self.metadata().map(|data| data.len()).unwrap_or(0)
 		}
+	}
+
+	/// Get the creation time of the file.
+	pub fn get_time_creation(&self) -> Result<SystemTime, Box<dyn Error>> {
+		match self.metadata()?.created() {
+			Ok(time) => Ok(time),
+			Err(error) => Err(error.into())
+		}
+	}
+
+	/// Get the modification time of the file.
+	pub fn get_time_modification(&self) -> Result<SystemTime, Box<dyn Error>> {
+		match self.metadata()?.modified() {
+			Ok(time) => Ok(time),
+			Err(error) => Err(error.into())
+		}
+	}
+
+	/// Get the last accessed time of the file.
+	pub fn get_time_accessed(&self) -> Result<SystemTime, Box<dyn Error>> {
+		match self.metadata()?.accessed() {
+			Ok(time) => Ok(time),
+			Err(error) => Err(error.into())
+		}
+	}
+
+	/// Get the file's permissions.
+	pub fn permissions(&self) -> Result<Permissions, Box<dyn Error>> {
+		Ok(self.metadata()?.permissions())
 	}
 
 
