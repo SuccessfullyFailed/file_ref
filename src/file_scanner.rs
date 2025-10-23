@@ -75,7 +75,7 @@ impl Iterator for FileScanner {
 	type Item = FileRef;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		self.sub_dir_scanner.get(&self.scan_settings)
+		self.sub_dir_scanner.get(&self.scan_settings, true)
 	}
 }
 
@@ -102,10 +102,10 @@ impl SubDirScanner {
 	}
 
 	/// Get the next file.
-	fn get(&mut self, scan_settings:&ScanSettings) -> Option<FileRef> {
+	fn get(&mut self, scan_settings:&ScanSettings, is_root:bool) -> Option<FileRef> {
 
 		// Try Self.
-		if scan_settings.include_self && !self.parsed_self {
+		if is_root && scan_settings.include_self && !self.parsed_self {
 			self.parsed_self = true;
 			if (scan_settings.results_filter)(&self.dir) {
 				return Some(self.dir.clone());
@@ -157,7 +157,7 @@ impl SubDirScanner {
 		if let Some(sub_scanners) = &mut self.sub_scanners {
 			while !sub_scanners.is_empty() {
 				let sub_scanner:&mut SubDirScanner = &mut sub_scanners[0];
-				if let Some(result) = sub_scanner.get(&scan_settings) {
+				if let Some(result) = sub_scanner.get(&scan_settings, false) {
 					return Some(result);
 				}
 				sub_scanners.remove(0);
