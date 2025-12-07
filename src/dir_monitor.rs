@@ -20,8 +20,7 @@ pub struct DirMonitor {
 	on_add_file:Vec<Box<dyn Fn(&FileRef)>>,
 	on_remove_file:Vec<Box<dyn Fn(&FileRef)>>,
 	on_modify_file:Vec<Box<dyn Fn(&FileRef)>>,
-	on_rename_file:Vec<Box<dyn Fn(&FileRef, &FileRef)>>,
-	on_error:Box<dyn Fn(&str)>
+	on_rename_file:Vec<Box<dyn Fn(&FileRef, &FileRef)>>
 }
 impl DirMonitor {
 
@@ -36,8 +35,7 @@ impl DirMonitor {
 			on_add_file: Vec::new(),
 			on_remove_file: Vec::new(),
 			on_modify_file: Vec::new(),
-			on_rename_file: Vec::new(),
-			on_error: Box::new(|error| eprintln!("{error}"))
+			on_rename_file: Vec::new()
 		}
 	}
 
@@ -68,12 +66,6 @@ impl DirMonitor {
 	/// Return self with an 'on_rename' event handler. Triggers the given function whenever a file is modified with the old filepath and new filepath as argument.
 	pub fn with_rename_handler<T:Fn(&FileRef, &FileRef) + 'static>(mut self, handler:T) -> Self {
 		self.on_rename_file.push(Box::new(handler));
-		self
-	}
-
-	/// Return self with an error handler. Prevents the listener from continuing to listen for other changes if one message fails.
-	pub fn with_error_handler<T:Fn(&str) + 'static>(mut self, handler:T) -> Self {
-		self.on_error = Box::new(handler);
 		self
 	}
 
@@ -110,7 +102,7 @@ impl DirMonitor {
 				// Try to capture a directory action.
 				let mut bytes_returned:DWORD = 0;
 				if !self.read_dir_changes(target_dir_ptr, &mut buffer, &mut bytes_returned) {
-					(self.on_error)("Error reading directory-change message.");
+					return Err("Error reading directory-change message.".into());
 				}
 
 				// Iterate through file-notify-information in the action.

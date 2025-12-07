@@ -43,7 +43,7 @@ mod tests {
 		// Quit monitor.
 		*MONITOR_ACTIVE.lock().unwrap() = false;
 		(temp_dir.clone() + "/exit_trigger.txt").create().unwrap();
-		sleep(Duration::from_millis(100));
+		sleep(Duration::from_millis(500));
 
 		// Validate correct history.
 		const EXPECTED_HISTORY:&[&'static str] = &[
@@ -57,7 +57,7 @@ mod tests {
 			"remove target/dir_monitor_test/subdir/file_c.txt",
 			"add target/dir_monitor_test/exit_trigger.txt"
 		];
-		assert_eq!(EXPECTED_HISTORY, *HISTORY.lock().unwrap());
+		assert_eq!(*HISTORY.lock().unwrap(), EXPECTED_HISTORY);
 
 		// Delete temp dir.
 		if temp_dir.exists() {
