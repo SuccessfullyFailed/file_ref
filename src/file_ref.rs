@@ -367,19 +367,37 @@ impl FileRef {
 
 	/// Create the file.
 	pub fn create(&self) -> Result<(), Box<dyn Error>> {
-		use std::fs::{ File, create_dir };
+		if self.is_dir() {
+			self.create_dir()
+		} else {
+			self.create_file()
+		}
+	}
+
+	/// Create this path specifically as a file.
+	pub fn create_file(&self) -> Result<(), Box<dyn Error>> {
+		use std::fs::File;
 
 		let is_dir:bool = self.is_dir();
 		if self.exists() {
 			Err(format!("Could not create {} \"{}\". {} already exists.", if is_dir { "dir" } else { "file" }, self.path(), if is_dir { "Dir" } else { "File" }).into())
 		} else {
 			self.guarantee_parent_dir()?;
-			if is_dir {
-				create_dir(self.path()).map_err(|error| error.into())
-			} else {
-				File::create(&self.path())?;
-				Ok(())
-			}
+			File::create(&self.path())?;
+			Ok(())
+		}
+	}
+
+	/// Create this path specifically as a dir.
+	pub fn create_dir(&self) -> Result<(), Box<dyn Error>> {
+		use std::fs::create_dir;
+
+		let is_dir:bool = self.is_dir();
+		if self.exists() {
+			Err(format!("Could not create {} \"{}\". {} already exists.", if is_dir { "dir" } else { "file" }, self.path(), if is_dir { "Dir" } else { "File" }).into())
+		} else {
+			self.guarantee_parent_dir()?;
+			create_dir(self.path()).map_err(|error| error.into())
 		}
 	}
 
