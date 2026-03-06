@@ -118,7 +118,7 @@ impl SubDirScanner {
 			let mut files:Vec<FileRef> = Vec::new();
 			let mut dirs:Vec<FileRef> = Vec::new();
 			for entry in dir_entries {
-				if entry.extension().is_some() {
+				if entry.is_file() {
 					files.push(entry);
 				} else {
 					dirs.push(entry);
