@@ -170,13 +170,24 @@ impl SubDirScanner {
 
 	/// Get all files and folders in the given directory non-recursive.
 	fn get_dir_raw_entries(dir:&FileRef) -> Vec<FileRef> {
-		std::fs::read_dir(dir.path())
-			.map(|results|
-				results
-					.flatten()
-					.map(|dir_entry| dir_entry.path().to_str().map(|path| FileRef::new(path)))
-					.flatten()
-					.collect::<Vec<FileRef>>()
-			).unwrap_or_default()
+		match std::fs::read_dir(dir.path()) {
+			Ok(results) => {
+				let mut entries:Vec<FileRef> = Vec::new();
+				for result in results {
+					match result {
+						Ok(dir_entry) => match dir_entry.path().to_str() {
+							Some(path) => entries.push(FileRef::new(path)),
+							None => eprintln!("Non-UTF-8 path ignored: {:?}", dir_entry.path())
+						},
+						Err(err) => eprintln!("Error reading directory entry: {err}")
+					}
+				}
+				entries
+			},
+			Err(err) => {
+				eprintln!("Failed to read {:?}: {err}", dir.path());
+				Vec::new()
+			}
+		}
 	}
 }
