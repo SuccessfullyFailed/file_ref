@@ -177,7 +177,7 @@ impl FileRef {
 
 	/// Check if the path is a relative or absolute path.
 	pub fn is_absolute_path(&self) -> bool {
-		self.contains(DISK_SEPARATOR)
+		self.contains(DISK_SEPARATOR) || self.starts_with("/")
 	}
 
 	/// Check if the path is a relative or absolute path.
