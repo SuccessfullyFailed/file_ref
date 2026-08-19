@@ -1,4 +1,4 @@
-use std::{ error::Error, time::SystemTime, fs::{ Metadata, Permissions }, ops::{ Add, AddAssign } };
+use std::{ error::Error, fs::{ Metadata, Permissions }, io::Read, ops::{ Add, AddAssign }, time::SystemTime };
 use core::fmt::{ self, Display, Debug, Formatter };
 use crate::FileScanner;
 
@@ -196,7 +196,7 @@ impl FileRef {
 
 	/// Get the name of the file without extension.
 	pub fn file_name_no_extension(&self) -> &str {
-		self.name().trim_end_matches(&self.extension().map(|extension| (".".to_owned() + extension)).unwrap_or_default())
+		self.name().trim_end_matches(&self.extension().map(|extension| ".".to_owned() + extension).unwrap_or_default())
 	}
 
 	/// Get the extension of the file.
@@ -238,6 +238,14 @@ impl FileRef {
 
 
 	/* METADATA METHODS */
+
+	/// Open the file.
+	fn open(&self) -> Result<std::fs::File, Box<dyn Error>> {
+		match std::fs::File::open(self.path()) {
+			Ok(opened_file) => Ok(opened_file),
+			Err(error) => Err(format!("Could not open file \"{self}\". {error}").into())
+		}
+	}
 	
 	/// Get the metadata of the file.
 	fn metadata(&self) -> Result<Metadata, Box<dyn Error>> {
@@ -246,7 +254,10 @@ impl FileRef {
 		} else if !self.exists() {
 			Err(format!("Could not get metadata, file {self} does not exist").into())
 		} else {
-			Ok(std::fs::File::open(self.path())?.metadata()?)
+			match self.open()?.metadata() {
+				Ok(metadata) => Ok(metadata),
+				Err(error) => Err(format!("Could not get metadata of file \"{self}\". {error}").into())
+			}
 		}
 	}
 
@@ -295,34 +306,32 @@ impl FileRef {
 	/* FILE READING METHODS */
 
 	/// Read the contents of the file as a string.
-	pub fn read(&self) -> Result<String, Box<dyn Error>> {
-		use std::{ fs::File, io::Read };
-		
+	pub fn read(&self) -> Result<String, Box<dyn Error>> {		
 		if self.is_dir() {
 			Err(format!("Could not read dir \"{}\". Only able to read files.", self.path()).into())
 		} else if !self.exists() {
 			Err(format!("Could not read file \"{}\". File does not exist.", self.path()).into())
 		} else {
-			let mut file:File = File::open(self.path())?;
 			let mut contents:String = String::new();
-			file.read_to_string(&mut contents)?;
-			Ok(contents)
+			match self.open()?.read_to_string(&mut contents) {
+				Ok(_) => Ok(contents),
+				Err(error) => Err(format!("Could not read file contents to string of file \"{self}\". {error}").into())
+			}
 		}
 	}
 
 	/// Read the contents of the file as bytes.
-	pub fn read_bytes(&self) -> Result<Vec<u8>, Box<dyn Error>> {
-		use std::{ fs::File, io::Read };
-		
+	pub fn read_bytes(&self) -> Result<Vec<u8>, Box<dyn Error>> {		
 		if self.is_dir() {
 			Err(format!("Could not read dir \"{}\". Only able to read files.", self.path()).into())
 		} else if !self.exists() {
 			Err(format!("Could not read file \"{}\". File does not exist.", self.path()).into())
 		} else {
-			let mut file:File = File::open(self.path())?;
-			let mut content:Vec<u8> = Vec::new();
-			file.read_to_end(&mut content)?;
-			Ok(content)
+			let mut contents:Vec<u8> = Vec::new();
+			match self.open()?.read_to_end(&mut contents) {
+				Ok(_) => Ok(contents),
+				Err(error) => Err(format!("Could not read file contents to string of file \"{self}\". {error}").into())
+			}
 		}
 	}
 	
@@ -335,11 +344,15 @@ impl FileRef {
 		} else if !self.exists() {
 			Err(format!("Could not read file \"{}\". File does not exist.", self.path()).into())
 		} else {
-			let mut file:File = File::open(self.path())?;
 			let mut buffer:Vec<u8> = vec![0; (end - start) as usize];
-			file.seek(SeekFrom::Start(start))?;
-			file.read_exact(&mut buffer)?;
-			Ok(buffer)
+			let mut file:File = self.open()?;
+			match file.seek(SeekFrom::Start(start)) {
+				Ok(_) => match file.read_exact(&mut buffer) {
+					Ok(_) => Ok(buffer),
+					Err(error) => Err(format!("Could not read range in file \"{self}\". {error}").into())
+				},
+				Err(error) => Err(format!("Could not find start of range in file \"{self}\". {error}").into())
+			}
 		}
 	}
 
@@ -360,7 +373,7 @@ impl FileRef {
 		let parent_dir:FileRef = self.parent_dir()?;
 		if !parent_dir.exists() {
 			parent_dir.guarantee_parent_dir()?;
-			parent_dir.create()?;
+			parent_dir.create_dir()?;
 		}
 		Ok(())
 	}
@@ -378,13 +391,14 @@ impl FileRef {
 	pub fn create_file(&self) -> Result<(), Box<dyn Error>> {
 		use std::fs::File;
 
-		let is_dir:bool = self.is_dir();
 		if self.exists() {
-			Err(format!("Could not create {} \"{}\". {} already exists.", if is_dir { "dir" } else { "file" }, self.path(), if is_dir { "Dir" } else { "File" }).into())
+			Err(format!("Could not create file \"{self}\". File already exists.").into())
 		} else {
 			self.guarantee_parent_dir()?;
-			File::create(&self.path())?;
-			Ok(())
+			match File::create(&self.path()) {
+				Ok(_) => Ok(()),
+				Err(error) => Err(format!("Could not create file \"{self}\". {error}").into())
+			}
 		}
 	}
 
@@ -392,12 +406,14 @@ impl FileRef {
 	pub fn create_dir(&self) -> Result<(), Box<dyn Error>> {
 		use std::fs::create_dir;
 
-		let is_dir:bool = self.is_dir();
 		if self.exists() {
-			Err(format!("Could not create {} \"{}\". {} already exists.", if is_dir { "dir" } else { "file" }, self.path(), if is_dir { "Dir" } else { "File" }).into())
+			Err(format!("Could not create dir \"{self}\". Dir already exists.").into())
 		} else {
 			self.guarantee_parent_dir()?;
-			create_dir(self.path()).map_err(|error| error.into())
+			match create_dir(self.path()) {
+				Ok(_) => Ok(()),
+				Err(error) => Err(format!("Could not create directory \"{self}\". {error}").into())
+			}
 		}
 	}
 
@@ -416,7 +432,10 @@ impl FileRef {
 		if self.is_dir() {
 			Err(format!("Could not write to dir \"{}\". Only able to write to files.", self.path()).into())
 		} else {
-			self._write_bytes(contents.as_bytes(), await_finish)
+			match self._write_bytes(contents.as_bytes(), await_finish) {
+				Ok(_) => Ok(()),
+				Err(error) => Err(format!("Could not write to file \"{self}\". {error}").into())
+			}
 		}
 	}
 
@@ -432,18 +451,28 @@ impl FileRef {
 
 	/// Write bytes to the file.
 	fn _write_bytes(&self, data:&[u8], await_finish:bool) -> Result<(), Box<dyn Error>> {
-		use std::{ fs::{ File, OpenOptions }, io::Write };
+		use std::{ io::Write, fs::OpenOptions };
 		
 		if self.is_dir() {
 			Err(format!("Could not write to dir \"{}\". Only able to write to files.", self.path()).into())
 		} else {
 			self.guarantee_exists()?;
-			let mut file:File = OpenOptions::new().write(true).truncate(true).open(self.path())?;
-			file.write_all(data)?;
-			if await_finish {
-				file.flush()?;
+			match OpenOptions::new().write(true).truncate(true).open(self.path()) {
+				Ok(mut file) => match file.write_all(data) {
+					Ok(_) => {
+						if await_finish {
+							match file.flush() {
+								Ok(_) => Ok(()),
+								Err(error) => Err(format!("Could not await flush when writing to file \"{self}\". {error}").into())
+							}
+						} else {
+							Ok(())
+						}
+					},
+					Err(error) => Err(format!("Could not write to file \"{self}\". {error}").into())
+				},
+				Err(error) => Err(format!("Could not open file \"{self}\". {error}").into())
 			}
-			Ok(())
 		}
 	}
 
@@ -459,20 +488,33 @@ impl FileRef {
 
 	/// Read a specific range of bytes from the file.
 	fn _write_bytes_to_range(&self, start:u64, data:&[u8], await_finish:bool) -> Result<(), Box<dyn Error>> {
-		use std::{ fs::{ File, OpenOptions }, io::{ Write, Seek, SeekFrom } };
+		use std::{ fs::OpenOptions, io::{ Write, Seek, SeekFrom } };
 
 		if self.is_dir() {
 			Err(format!("Could not write to dir \"{}\". Only able to write to files.", self.path()).into())
 		} else if !self.exists() {
 			Err(format!("Could not write to file \"{}\". File does not exist.", self.path()).into())
 		} else {
-			let mut file:File = OpenOptions::new().write(true).open(self.path())?;
-			file.seek(SeekFrom::Start(start))?;
-			file.write_all(data)?;
-			if await_finish {
-				file.flush()?;
+			self.guarantee_exists()?;
+			match OpenOptions::new().write(true).open(self.path()) {
+				Ok(mut file) => match file.seek(SeekFrom::Start(start)) {
+					Ok(_) => match file.write_all(data) {
+						Ok(_) => {
+							if await_finish {
+								match file.flush() {
+									Ok(_) => Ok(()),
+									Err(error) => Err(format!("Could not await flush when writing to file \"{self}\". {error}").into())
+								}
+							} else {
+								Ok(())
+							}
+						},
+						Err(error) => Err(format!("Could not write to file \"{self}\". {error}").into())
+					},
+					Err(error) => Err(format!("Could not find start of range in file \"{self}\". {error}").into())
+				},
+				Err(error) => Err(format!("Could not open file \"{self}\". {error}").into())
 			}
-			Ok(())
 		}
 	}
 
@@ -498,7 +540,7 @@ impl FileRef {
 
 	/// Append bytes to the file.
 	fn _append_bytes(&self, data:&[u8], await_finish:bool) -> Result<(), Box<dyn Error>> {
-		use std::{ fs::{ File, OpenOptions }, io::Write };
+		use std::{ io::Write, fs::OpenOptions };
 
 		if self.is_dir() {
 			Err(format!("Could not append to dir \"{}\". Only able to append to files.", self.path()).into())
@@ -506,12 +548,23 @@ impl FileRef {
 			Err(format!("Could not append to file \"{}\". File does not exist.", self.path()).into())
 		} else {
 			self.guarantee_exists()?;
-			let mut file:File = OpenOptions::new().append(true).open(self.path())?;
-			file.write_all(data)?;
-			if await_finish {
-				file.flush()?;
+
+			match OpenOptions::new().append(true).open(self.path()) {
+				Ok(mut file) => match file.write_all(data) {
+					Ok(_) => {
+						if await_finish {
+							match file.flush() {
+								Ok(_) => Ok(()),
+								Err(error) => Err(format!("Could not await flush when appending to file \"{self}\". {error}").into())
+							}
+						} else {
+							Ok(())
+						}
+					},
+					Err(error) => Err(format!("Could not append to file \"{self}\". {error}").into())
+				},
+				Err(error) => Err(format!("Could not open file \"{self}\". {error}").into())
 			}
-			Ok(())
 		}
 	}
 
@@ -529,7 +582,10 @@ impl FileRef {
 			Err(format!("Could not copy file \"{}\". File does not exist.", self.path()).into())
 		} else {
 			target.guarantee_parent_dir()?;
-			rename(self.path(), target.path()).map_err(|error| error.into())
+			match rename(self.path(), target.path()) {
+				Ok(_) => Ok(()),
+				Err(error) => Err(format!("Could not rename file \"{self}\" to \"{target}\". {error}").into())
+			}
 		}
 	}
 
@@ -543,7 +599,10 @@ impl FileRef {
 			Err(format!("Could not copy file \"{}\". File does not exist.", self.path()).into())
 		} else {
 			target.guarantee_parent_dir()?;
-			copy(self.path(), target.path()).map_err(|error| error.into())
+			match copy(self.path(), target.path()) {
+				Ok(bytes) => Ok(bytes),
+				Err(error) => Err(format!("Could not copy file \"{self}\" to \"{target}\". {error}").into())
+			}
 		}
 	}
 
@@ -556,9 +615,15 @@ impl FileRef {
 		use std::fs::{ remove_dir_all, remove_file };
 
 		if self.is_dir() {
-			remove_dir_all(self.path()).map_err(|error| error.into())
+			match remove_dir_all(self.path()) {
+				Ok(bytes) => Ok(bytes),
+				Err(error) => Err(format!("Could not delete directory \"{self}\". {error}").into())
+			}
 		} else {
-			remove_file(self.path()).map_err(|error| error.into())
+			match remove_file(self.path()) {
+				Ok(bytes) => Ok(bytes),
+				Err(error) => Err(format!("Could not delete file \"{self}\". {error}").into())
+			}
 		}
 	}
 

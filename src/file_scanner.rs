@@ -174,9 +174,8 @@ impl SubDirScanner {
 			.map(|results|
 				results
 					.flatten()
-					.map(|dir_entry|
-						FileRef::new(dir_entry.path().to_str().unwrap())
-					)
+					.map(|dir_entry| dir_entry.path().to_str().map(|path| FileRef::new(path)))
+					.flatten()
 					.collect::<Vec<FileRef>>()
 			).unwrap_or_default()
 	}
